@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ playlist.name }} - Mood Music{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" data-playlist-id="{{ playlist.id }}">
+    {% csrf_token %}
+    
+    <!-- Playlist Header -->
+    <div class="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-secondary">
+        <div class="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+        <div class="relative px-8 py-12">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="text-white">
+                    <div class="flex items-center gap-4 mb-4">
+                        {% if playlist.mood and playlist.mood.icon %}
+                            <img src="{{ playlist.mood.icon.url }}" alt="{{ playlist.mood.name }}" class="w-16 h-16 rounded-lg">
+                        {% else %}
+                            <div class="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center text-white">
+                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/>
+                                </svg>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <h1 class="text-3xl font-bold mb-1">{{ playlist.name }}</h1>
+                            <p class="text-white/80">
+                                {% if playlist.mood %}{{ playlist.mood.name }} • {% endif %}
+                                {{ playlist.playlist_songs.count }} songs
+                            </p>
+                        </div>
+                    </div>
+                    {% if playlist.description %}
+                        <p class="text-white/90">{{ playlist.description }}</p>
+                    {% endif %}
+                </div>
+                <div class="flex flex-wrap gap-4">
+                    {% if user == playlist.user %}
+                        <a href="{% url 'playlists:playlist_edit' playlist.id %}" 
+                           class="inline-flex items-center px-6 py-3 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors duration-200">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                            Edit Playlist
+                        </a>
+                        <a href="{% url 'playlists:playlist_delete' playlist.id %}" 
+                           class="inline-flex items-center px-6 py-3 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors duration-200">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Delete
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="mb-6">
+        <form action="" method="get" class="max-w-xl">
+            <div class="relative">
+                <input type="text" name="search" value="{{ search_query }}" 
+                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                       placeholder="Search songs by title or artist...">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <button type="submit"
+                        class="absolute inset-y-0 right-0 flex items-center px-4 bg-primary text-white rounded-r-lg hover:bg-primary/90 transition-colors">
+                    Search
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Songs List -->
+    <div class="mt-8">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Songs ({{ playlist.songs.count }})</h2>
+            {% if can_edit %}
+            <button id="btnAddSongs" class="bg-primary text-white px-4 py-2 rounded hover:bg-purple-700">
+                Add Songs
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Songs List with drag-and-drop -->
+        {% if playlist.songs.exists %}
+        <div id="sortableSongs" class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+            <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+                {% for song in songs %}
+                <li class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" data-id="{{ song.id }}">
+                    <div class="p-4 flex items-center">
+                        {% if can_edit %}
+                        <div class="pr-4 cursor-move">
+                            <i class="fas fa-grip-vertical text-gray-400"></i>
+                        </div>
+                        {% endif %}
+                        <div class="w-12 h-12 flex-shrink-0 mr-4">
+                            {% if song.album.images %}
+                            <img src="{{ song.album.images.0.url }}" alt="{{ song.album.name }}" class="w-full h-full object-cover rounded">
+                            {% else %}
+                            <div class="w-full h-full bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center">
+                                <i class="fas fa-music text-gray-400"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow min-w-0">
+                            <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ song.name }}</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                {{ song.artists.0.name }}
+                            </p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            {% if song.preview_url %}
+                            <button onclick="playPreview('{{ song.preview_url }}')" 
+                                    class="text-gray-700 dark:text-gray-300 hover:text-primary p-2">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            {% endif %}
+                            
+                            {% if user.is_spotify_connected %}
+                            <button onclick="playTrackOnSpotify('{{ song.uri }}')"
+                                    class="text-green-600 hover:text-green-700 p-2" 
+                                    title="Play on Spotify">
+                                <i class="fab fa-spotify"></i>
+                            </button>
+                            {% endif %}
+                            
+                            {% if can_edit %}
+                            <button onclick="removeSong('{{ song.id }}', '{{ song.name|escapejs }}')" 
+                                    class="text-red-600 hover:text-red-700 p-2">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="mt-6 flex justify-center">
+            <div class="inline-flex">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-2 rounded-l">
+                    Previous
+                </a>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <span class="bg-primary text-white px-4 py-2 border border-primary">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-2">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-2 rounded-r">
+                    Next
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 text-center">
+            <p class="text-gray-600 dark:text-gray-400 mb-4">This playlist doesn't have any songs yet.</p>
+            {% if can_edit %}
+            <button id="btnEmptyAddSongs" class="bg-primary text-white px-4 py-2 rounded hover:bg-purple-700">
+                Add Your First Song
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include Sortable.js library -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+<script>
+    // Function to play song preview
+    function playPreview(previewUrl) {
+        if (!previewUrl) {
+            alert('No preview available for this song');
+            return;
+        }
+        
+        if (window.playPreview) {
+            window.playPreview(previewUrl);
+        } else {
+            // Fallback if global player not available
+            const audio = new Audio(previewUrl);
+            audio.play().catch(error => {
+                console.error('Error playing preview:', error);
+                alert('Failed to play preview. Please try again.');
+            });
+        }
+    }
+    
+    // Set up sortable list for drag-and-drop reordering
+    {% if can_edit %}
+    const sortableEl = document.getElementById('sortableSongs');
+    if (sortableEl) {
+        new Sortable(sortableEl.querySelector('ul'), {
+            handle: '.fa-grip-vertical',
+            animation: 150,
+            onEnd: function(evt) {
+                // Get new order of songs
+                const newOrder = Array.from(evt.to.children).map(li => li.dataset.id);
+                
+                // Send new order to server
+                fetch('{% url "playlists:reorder_songs" playlist.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ song_order: newOrder })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        console.error('Error reordering songs:', data.error);
+                        alert('Failed to reorder songs. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error reordering songs:', error);
+                    alert('Failed to reorder songs. Please try again.');
+                });
+            }
+        });
+    }
+    
+    // Function to remove a song from the playlist
+    function removeSong(songId, songName) {
+        if (confirm(`Are you sure you want to remove "${songName}" from this playlist?`)) {
+            fetch(`/playlists/{{ playlist.id }}/remove-song/${songId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload the page to reflect changes
+                    location.reload();
+                } else {
+                    alert(`Error: ${data.error || 'Failed to remove song'}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error removing song:', error);
+                alert('Failed to remove song. Please try again.');
+            });
+        }
+    }
+    
+    // Add Songs button
+    const addSongsBtn = document.getElementById('btnAddSongs') || document.getElementById('btnEmptyAddSongs');
+    if (addSongsBtn) {
+        addSongsBtn.addEventListener('click', function() {
+            alert('Search functionality will be implemented soon!');
+        });
+    }
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    {% endif %}
+</script>
+{% endblock %}

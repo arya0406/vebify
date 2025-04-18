@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detect Your Mood - Music App{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-center">Detect Your Mood</h1>
+        
+        <!-- Mood Detection Section -->
+        <div class="mood-detection-container bg-white rounded-lg shadow-lg p-6 mb-8">
+            <div class="webcam-container mb-6">
+                <video id="webcam" class="w-full rounded-lg" playsinline></video>
+                <canvas id="canvas" class="hidden"></canvas>
+            </div>
+            
+            <div class="controls flex justify-center gap-4 mb-6">
+                <button id="startButton" class="btn-primary">
+                    <svg class="w-5 h-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Start Camera
+                </button>
+                <button id="captureButton" class="btn-secondary" disabled>
+                    <svg class="w-5 h-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Capture
+                </button>
+            </div>
+            
+            <!-- Results Section -->
+            <div id="results" class="hidden">
+                <div class="detected-mood text-center mb-6">
+                    <h3 class="text-xl font-semibold mb-2">Detected Mood:</h3>
+                    <div id="moodDisplay" class="text-2xl font-bold text-primary"></div>
+                    <div id="confidenceDisplay" class="text-sm text-gray-600 mt-1"></div>
+                </div>
+                
+                <!-- Manual Override Section -->
+                <div class="mood-override mb-6">
+                    <h4 class="text-lg font-semibold mb-3">Not quite right? Select your mood:</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {% for mood_value, mood_label in mood_choices %}
+                        <button class="override-mood-btn px-4 py-2 rounded-lg border hover:bg-primary hover:text-white transition-colors"
+                                data-mood="{{ mood_value }}">
+                            {{ mood_label }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <a href="#" id="viewPlaylistButton" class="btn-primary inline-block">
+                        View Recommended Playlist
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .mood-detection-container {
+        background: linear-gradient(to bottom right, rgba(255,255,255,0.9), rgba(255,255,255,0.95));
+        backdrop-filter: blur(10px);
+    }
+    
+    .webcam-container {
+        aspect-ratio: 16/9;
+        overflow: hidden;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-primary {
+        @apply bg-gradient-to-r from-purple-600 to-blue-500 text-white px-6 py-2 rounded-lg
+        hover:from-purple-700 hover:to-blue-600 transition-all duration-300 shadow-md
+        focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50;
+    }
+    
+    .btn-secondary {
+        @apply bg-gradient-to-r from-gray-600 to-gray-500 text-white px-6 py-2 rounded-lg
+        hover:from-gray-700 hover:to-gray-600 transition-all duration-300 shadow-md
+        focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50
+        disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+    
+    .override-mood-btn {
+        @apply transform hover:scale-105 transition-transform duration-200
+        focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50;
+    }
+    
+    .text-primary {
+        @apply text-purple-600;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let stream = null;
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    const startButton = document.getElementById('startButton');
+    const captureButton = document.getElementById('captureButton');
+    const results = document.getElementById('results');
+    const moodDisplay = document.getElementById('moodDisplay');
+    const confidenceDisplay = document.getElementById('confidenceDisplay');
+    const viewPlaylistButton = document.getElementById('viewPlaylistButton');
+    let currentDetectionId = null;
+
+    // Start webcam
+    startButton.addEventListener('click', async function() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            video.play();
+            startButton.disabled = true;
+            captureButton.disabled = false;
+            results.classList.add('hidden');
+        } catch (err) {
+            console.error('Error accessing webcam:', err);
+            alert('Error accessing webcam. Please make sure you have granted camera permissions.');
+        }
+    });
+
+    // Capture image
+    captureButton.addEventListener('click', function() {
+        // Set canvas dimensions to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Draw video frame to canvas
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Get base64 image data
+        const imageData = canvas.toDataURL('image/jpeg');
+        
+        // Send to server for mood detection
+        fetch('{% url "detect_mood" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                image: imageData
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Display results
+            results.classList.remove('hidden');
+            moodDisplay.textContent = data.mood.charAt(0).toUpperCase() + data.mood.slice(1);
+            confidenceDisplay.textContent = `Confidence: ${Math.round(data.confidence * 100)}%`;
+            currentDetectionId = data.detection_id;
+            
+            // Update playlist link
+            viewPlaylistButton.href = `/moods/select_mood/${data.mood}/`;
+            
+            // Stop webcam
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                startButton.disabled = false;
+                captureButton.disabled = true;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error detecting mood. Please try again.');
+        });
+    });
+
+    // Handle mood override
+    document.querySelectorAll('.override-mood-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const mood = this.dataset.mood;
+            
+            fetch(`/mood-detection/override/${currentDetectionId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: `mood=${mood}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                moodDisplay.textContent = data.mood.charAt(0).toUpperCase() + data.mood.slice(1);
+                viewPlaylistButton.href = `/moods/select_mood/${data.mood}/`;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating mood. Please try again.');
+            });
+        });
+    });
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %} 

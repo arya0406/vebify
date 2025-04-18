@@ -1,0 +1,742 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en" {% if user.is_authenticated and user.dark_mode %}class="dark"{% endif %}>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{% block title %}Mood Music{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/default-artwork.svg' %}">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6c5ce7',
+                        secondary: '#a55eea',
+                        accent: '#fd79a8'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom CSS -->
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    
+    <!-- Alpine.js -->
+    <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.8.2/dist/alpine.min.js" defer></script>
+
+    <!-- Theme Management Script -->
+    <script src="{% static 'js/theme.js' %}"></script>
+    
+    {% block extra_css %}{% endblock %}
+    <style>
+        /* Shared styles */
+        .bg-primary { background-color: #6d28d9; }
+        .border-primary { border-color: #6d28d9; }
+        .text-primary { color: #6d28d9; }
+        .hover\:bg-primary:hover { background-color: #5b21b6; }
+        .hover\:text-primary:hover { color: #5b21b6; }
+        
+        /* Light mode */
+        body { 
+            background-color: #f9fafb;
+            color: #1f2937;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* Dark mode */
+        .dark body {
+            background-color: #111827;
+            color: #f9fafb;
+        }
+        
+        .dark .bg-white {
+            background-color: #1f2937;
+        }
+        
+        .dark .text-gray-800 {
+            color: #f3f4f6;
+        }
+        
+        .dark .border-gray-200 {
+            border-color: #374151;
+        }
+        
+        .dark .text-gray-700 {
+            color: #e5e7eb;
+        }
+        
+        .dark .bg-gray-100,
+        .dark .bg-gray-50 {
+            background-color: #374151;
+        }
+        
+        .dark .text-gray-600 {
+            color: #d1d5db;
+        }
+        
+        /* Fixed player */
+        #player-bar {
+            background-color: rgba(30, 30, 30, 0.95);
+            border-top: 1px solid #333;
+            color: #fff;
+        }
+        
+        /* Show player controls when player is active */
+        #player-controls.hidden {
+            display: none;
+        }
+        
+        .text-shadow {
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+        }
+        
+        /* Progress bar */
+        .progress-container {
+            background-color: #535353;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .progress-bar {
+            background-color: #1DB954;
+            border-radius: 4px;
+            transition: width 0.1s linear;
+        }
+        
+        /* Volume control */
+        .volume-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: #535353;
+            outline: none;
+        }
+        
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+        }
+        
+        .volume-slider::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+        }
+        
+        /* Spotify logo */
+        .spotify-logo {
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+        }
+        
+        /* Mobile nav */
+        @media (max-width: 768px) {
+            #player-bar {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <a href="{% url 'home' %}" class="flex items-center space-x-2">
+                    <svg class="w-8 h-8 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/>
+                    </svg>
+                    <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
+                        Mood Music
+                    </span>
+                </a>
+                
+                <!-- Global Search Box - Desktop -->
+                <div class="hidden md:flex flex-1 max-w-md mx-4">
+                    <form action="{% url 'search' %}" method="get" class="w-full">
+                        <div class="relative">
+                            <input type="text" name="q" placeholder="Search songs, moods, playlists..." 
+                                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Desktop navigation -->
+                <div class="hidden md:flex items-center space-x-4">
+                    {% if user.is_authenticated %}
+                        <!-- Add main menu items for desktop -->
+                        <a href="{% url 'dashboard' %}" class="text-gray-700 hover:text-primary font-medium">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
+                        <a href="{% url 'moods:mood_list' %}" class="text-gray-700 hover:text-primary font-medium">
+                            <i class="fas fa-smile mr-1"></i> Moods
+                        </a>
+                        <a href="{% url 'playlists:playlist_list' %}" class="text-gray-700 hover:text-primary font-medium">
+                            <i class="fas fa-list mr-1"></i> Playlists
+                        </a>
+                        <a href="{% url 'mood_detection:face_mood_player' %}" class="text-gray-700 hover:text-primary font-medium">
+                            <i class="fas fa-camera mr-1"></i> Face Detection
+                        </a>
+                        
+                        <div x-data="{ isOpen: false }" class="relative">
+                            <button @click="isOpen = !isOpen" @keydown.escape="isOpen = false" 
+                                    class="flex items-center text-gray-700 hover:text-gray-900 focus:outline-none">
+                                {% if user.profile_picture %}
+                                    <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="w-8 h-8 rounded-full object-cover">
+                                {% else %}
+                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white">
+                                        {{ user.username|slice:":1" }}
+                                    </div>
+                                {% endif %}
+                                <span class="ml-2">{{ user.username }}</span>
+                                <!-- Dropdown arrow -->
+                                <svg class="ml-1 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                            
+                            <!-- Dropdown menu -->
+                            <div x-show="isOpen" 
+                                 @click.away="isOpen = false"
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="transform opacity-0 scale-95"
+                                 x-transition:enter-end="transform opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="transform opacity-100 scale-100"
+                                 x-transition:leave-end="transform opacity-0 scale-95"
+                                 class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                                {% if user.is_staff %}
+                                    <a href="{% url 'admin:index' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-cog mr-2"></i> Admin
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'dashboard' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-home mr-2"></i> Dashboard
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'profile' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-user mr-2"></i> Profile
+                                </a>
+                                <a href="{% url 'profile_edit' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-cog mr-2"></i> Settings
+                                </a>
+                                <form method="post" action="{% url 'logout' %}" class="block">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="text-gray-700 hover:text-gray-900 transition-colors">
+                            Login
+                        </a>
+                        <a href="{% url 'register' %}" class="bg-primary text-white px-4 py-2 rounded-md hover:bg-opacity-90 transition-colors">
+                            Register
+                        </a>
+                    {% endif %}
+                </div>
+                
+                <!-- Mobile menu button -->
+                <button class="md:hidden" x-data="{ open: false }" @click="open = !open">
+                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile menu -->
+    <div class="md:hidden" x-show="open" @click.away="open = false">
+        <!-- Mobile Search -->
+        <div class="p-3">
+            <form action="{% url 'search' %}" method="get">
+                <div class="relative">
+                    <input type="text" name="q" placeholder="Search..." 
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="px-2 pt-2 pb-3 space-y-1">
+            {% if user.is_authenticated %}
+                {% if user.is_staff %}
+                    <a href="{% url 'admin:index' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Admin</a>
+                    <a href="{% url 'admin:users_customuser_changelist' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Users</a>
+                    <a href="{% url 'admin:moods_mood_changelist' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Moods</a>
+                {% else %}
+                    <a href="{% url 'dashboard' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Dashboard</a>
+                    <a href="{% url 'moods:mood_list' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Moods</a>
+                    <a href="{% url 'playlists:playlist_list' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Playlists</a>
+                    <a href="{% url 'mood_detection:face_mood_player' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Face Detection</a>
+                {% endif %}
+                <a href="{% url 'profile' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Profile</a>
+                <a href="{% url 'profile_edit' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Settings</a>
+                <form method="post" action="{% url 'logout' %}" class="block">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full text-left px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Logout</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Login</a>
+                <a href="{% url 'register' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Register</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-grow pb-20">
+        <!-- Messages -->
+        {% if messages %}
+            <div class="container mx-auto px-4 mt-4">
+                {% for message in messages %}
+                    <div class="notification {{ message.tags }} p-4 mb-4" x-data="{ show: true }" x-show="show">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                {% if message.tags == 'success' %}
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                {% elif message.tags == 'error' %}
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                {% elif message.tags == 'warning' %}
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                    </svg>
+                                {% endif %}
+                                <span>{{ message }}</span>
+                            </div>
+                            <button @click="show = false" class="text-current hover:text-gray-700">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Page Content -->
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Fixed Web Player with Spotify SDK -->
+    <div id="player-bar" class="fixed bottom-0 left-0 right-0 py-3 px-4 z-40 hidden">
+        <div class="container mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <!-- Track Info -->
+                <div class="flex items-center mb-3 md:mb-0 w-full md:w-1/3">
+                    <div id="current-track-image" class="w-12 h-12 bg-gray-700 rounded mr-3 flex-shrink-0">
+                        <img id="album-cover" src="" alt="" class="w-full h-full object-cover rounded hidden">
+                    </div>
+                    <div class="truncate">
+                        <div id="current-track-name" class="text-sm font-medium truncate">Not Playing</div>
+                        <div id="current-track-artist" class="text-xs text-gray-400 truncate">Connect to Spotify</div>
+                    </div>
+                </div>
+                
+                <!-- Player Controls -->
+                <div id="player-controls" class="flex flex-col items-center w-full md:w-1/3 hidden">
+                    <!-- Control Buttons -->
+                    <div class="flex justify-center items-center space-x-6">
+                        <button id="btn-previous" class="text-gray-400 hover:text-white focus:outline-none">
+                            <i class="fas fa-step-backward"></i>
+                        </button>
+                        <button id="btn-play-pause" class="bg-white rounded-full w-8 h-8 flex items-center justify-center text-black hover:bg-gray-200 focus:outline-none">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button id="btn-next" class="text-gray-400 hover:text-white focus:outline-none">
+                            <i class="fas fa-step-forward"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="w-full flex items-center mt-2 px-2">
+                        <span id="current-time" class="text-xs text-gray-400 w-10">0:00</span>
+                        <div id="progress-container" class="flex-grow mx-2 progress-container">
+                            <div id="progress-bar" class="h-1 progress-bar" style="width: 0%"></div>
+                        </div>
+                        <span id="duration" class="text-xs text-gray-400 w-10">0:00</span>
+                    </div>
+                </div>
+                
+                <!-- Volume & Device Controls -->
+                <div class="flex items-center justify-end w-full md:w-1/3 mt-3 md:mt-0">
+                    <div class="hidden md:flex items-center mr-4">
+                        <i class="fas fa-volume-up text-gray-400 mr-2"></i>
+                        <input type="range" id="volume-slider" min="0" max="100" value="50" class="volume-slider w-20">
+                    </div>
+                    <div class="flex items-center">
+                        <button id="btn-devices" class="text-gray-400 hover:text-white focus:outline-none mr-3">
+                            <i class="fas fa-desktop"></i>
+                        </button>
+                        <a href="https://open.spotify.com" target="_blank" class="text-gray-400 hover:text-white">
+                            <svg class="spotify-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.839-.179-.959-.6-.12-.421.18-.84.6-.96 4.56-1.021 8.52-.6 11.64 1.32.42.237.48.66.301 1.021zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" fill="currentColor"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spotify SDK Scripts -->
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize variables
+        const playerBar = document.getElementById('player-bar');
+        const playerControls = document.getElementById('player-controls');
+        const btnPlayPause = document.getElementById('btn-play-pause');
+        const btnPrevious = document.getElementById('btn-previous');
+        const btnNext = document.getElementById('btn-next');
+        const btnDevices = document.getElementById('btn-devices');
+        const volumeSlider = document.getElementById('volume-slider');
+        const progressBar = document.getElementById('progress-bar');
+        const progressContainer = document.getElementById('progress-container');
+        const currentTime = document.getElementById('current-time');
+        const duration = document.getElementById('duration');
+        const albumCover = document.getElementById('album-cover');
+        const currentTrackName = document.getElementById('current-track-name');
+        const currentTrackArtist = document.getElementById('current-track-artist');
+        const audioPreview = document.getElementById('audio-preview');
+        
+        // Spotify Player Variables
+        let spotifyToken = null;
+        let player = null;
+        let deviceId = null;
+        let currentTrack = null;
+        let isPlaying = false;
+        let progressTimer = null;
+        
+        // Initialize the Spotify Web Playback SDK
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            // First, get a valid token
+            getSpotifyToken().then(token => {
+                if (!token) return;
+                
+                spotifyToken = token;
+                
+                // Initialize the Spotify Player
+                player = new Spotify.Player({
+                    name: 'Mood Music Web Player',
+                    getOAuthToken: cb => { cb(spotifyToken); },
+                    volume: 0.5
+                });
+                
+                // Error handling
+                player.addListener('initialization_error', ({ message }) => { console.error('Initialization error:', message); });
+                player.addListener('authentication_error', ({ message }) => { 
+                    console.error('Authentication error:', message);
+                    // Try to refresh the token
+                    getSpotifyToken().then(newToken => {
+                        if (newToken) {
+                            spotifyToken = newToken;
+                            // Reconnect with new token
+                            player.connect();
+                        }
+                    });
+                });
+                player.addListener('account_error', ({ message }) => { console.error('Account error:', message); });
+                player.addListener('playback_error', ({ message }) => { console.error('Playback error:', message); });
+                
+                // Ready
+                player.addListener('ready', ({ device_id }) => {
+                    console.log('Ready with Device ID', device_id);
+                    deviceId = device_id;
+                    playerBar.classList.remove('hidden');
+                });
+                
+                // Not Ready
+                player.addListener('not_ready', ({ device_id }) => {
+                    console.log('Device ID has gone offline', device_id);
+                    deviceId = null;
+                });
+                
+                // State changes
+                player.addListener('player_state_changed', state => {
+                    if (!state) return;
+                    
+                    currentTrack = state.track_window.current_track;
+                    isPlaying = !state.paused;
+                    
+                    // Update UI
+                    updatePlayerUI(state);
+                });
+                
+                // Connect to the player
+                player.connect();
+            });
+        };
+        
+        // Function to get a Spotify token
+        async function getSpotifyToken() {
+            try {
+                const response = await fetch('/spotify/get-token/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    return data.token;
+                } else {
+                    console.error('Failed to get token:', data.error);
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error fetching token:', error);
+                return null;
+            }
+        }
+        
+        // Function to play a track via Spotify
+        async function playTrack(uri) {
+            if (!deviceId || !spotifyToken) {
+                console.error('Not ready to play tracks');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/spotify/play/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        uri: uri,
+                        device_id: deviceId
+                    })
+                });
+                
+                const data = await response.json();
+                if (!data.success) {
+                    console.error('Failed to play track:', data.error);
+                }
+            } catch (error) {
+                console.error('Error playing track:', error);
+            }
+        }
+        
+        // Update player UI based on state
+        function updatePlayerUI(state) {
+            if (!state || !state.track_window.current_track) return;
+            
+            const track = state.track_window.current_track;
+            
+            // Show player controls
+            playerControls.classList.remove('hidden');
+            
+            // Update track info
+            currentTrackName.textContent = track.name;
+            currentTrackArtist.textContent = track.artists.map(a => a.name).join(', ');
+            
+            // Update album cover
+            if (track.album.images && track.album.images.length > 0) {
+                albumCover.src = track.album.images[0].url;
+                albumCover.classList.remove('hidden');
+            } else {
+                albumCover.classList.add('hidden');
+            }
+            
+            // Update play/pause button
+            if (isPlaying) {
+                btnPlayPause.innerHTML = '<i class="fas fa-pause"></i>';
+            } else {
+                btnPlayPause.innerHTML = '<i class="fas fa-play"></i>';
+            }
+            
+            // Update duration
+            duration.textContent = formatTime(state.duration);
+            
+            // Clear any existing timer and start a new one
+            if (progressTimer) clearInterval(progressTimer);
+            updateProgress(state.position, state.duration);
+            
+            if (isPlaying) {
+                progressTimer = setInterval(() => {
+                    player.getCurrentState().then(state => {
+                        if (state) {
+                            updateProgress(state.position, state.duration);
+                        }
+                    });
+                }, 1000);
+            }
+        }
+        
+        // Update progress bar
+        function updateProgress(position, totalDuration) {
+            const percent = (position / totalDuration) * 100;
+            progressBar.style.width = `${percent}%`;
+            currentTime.textContent = formatTime(position);
+        }
+        
+        // Format time in mm:ss
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Control buttons event listeners
+        btnPlayPause.addEventListener('click', () => {
+            if (!player) return;
+            
+            player.togglePlay().then(() => {
+                console.log('Toggled playback');
+            });
+        });
+        
+        btnPrevious.addEventListener('click', () => {
+            if (!player) return;
+            
+            player.previousTrack().then(() => {
+                console.log('Skipped to previous track');
+            });
+        });
+        
+        btnNext.addEventListener('click', () => {
+            if (!player) return;
+            
+            player.nextTrack().then(() => {
+                console.log('Skipped to next track');
+            });
+        });
+        
+        // Volume slider
+        volumeSlider.addEventListener('input', () => {
+            if (!player) return;
+            
+            const volume = volumeSlider.value / 100;
+            player.setVolume(volume).then(() => {
+                console.log('Volume set to', volume);
+            });
+        });
+        
+        // Progress bar click handler
+        progressContainer.addEventListener('click', event => {
+            if (!player || !currentTrack) return;
+            
+            const rect = progressContainer.getBoundingClientRect();
+            const percent = (event.clientX - rect.left) / rect.width;
+            
+            player.getCurrentState().then(state => {
+                if (state) {
+                    const position = Math.floor(state.duration * percent);
+                    player.seek(position).then(() => {
+                        console.log('Seeked to', position);
+                    });
+                }
+            });
+        });
+        
+        // Device button handler
+        btnDevices.addEventListener('click', () => {
+            // Simply open Spotify in a new tab for now
+            window.open('https://open.spotify.com/devices', '_blank');
+        });
+        
+        // Helper to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Expose the playTrack function globally
+        window.playTrackOnSpotify = function(uri) {
+            playTrack(uri);
+        };
+        
+        // Function to play audio preview
+        window.playPreview = function(previewUrl) {
+            if (!previewUrl) {
+                alert('No preview available for this track');
+                return;
+            }
+            
+            // Stop any currently playing preview
+            audioPreview.pause();
+            audioPreview.currentTime = 0;
+            
+            // Set the new source and play
+            audioPreview.src = previewUrl;
+            audioPreview.play()
+                .catch(error => {
+                    console.error('Error playing preview:', error);
+                    alert('Failed to play preview. Please try again.');
+                });
+        };
+    });
+    </script>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-auto">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="text-gray-600 text-sm mb-4 md:mb-0">
+                    © {% now "Y" %} Mood Music. All rights reserved.
+                </div>
+                <div class="flex space-x-6">
+                    <a href="#" class="text-gray-600 hover:text-primary transition-colors">About</a>
+                    <a href="#" class="text-gray-600 hover:text-primary transition-colors">Privacy</a>
+                    <a href="#" class="text-gray-600 hover:text-primary transition-colors">Terms</a>
+                    <a href="#" class="text-gray-600 hover:text-primary transition-colors">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Custom JavaScript -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

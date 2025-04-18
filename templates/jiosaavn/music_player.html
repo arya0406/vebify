@@ -1,0 +1,644 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}JioSaavn Music Player{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/music_player.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Left sidebar - Mood selection -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Select Mood</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group mood-selector">
+                        <button type="button" class="list-group-item list-group-item-action mood-btn" data-mood="Happy">
+                            <i class="fas fa-smile me-2"></i> Happy
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action mood-btn" data-mood="Sad">
+                            <i class="fas fa-sad-tear me-2"></i> Sad
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action mood-btn" data-mood="Joy">
+                            <i class="fas fa-laugh-beam me-2"></i> Joy
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action mood-btn" data-mood="Anger">
+                            <i class="fas fa-angry me-2"></i> Anger
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action mood-btn" data-mood="Neutral">
+                            <i class="fas fa-meh me-2"></i> Neutral
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action mood-btn" data-mood="Relaxed">
+                            <i class="fas fa-couch me-2"></i> Relaxed
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action mood-btn" data-mood="Calm">
+                            <i class="fas fa-wind me-2"></i> Calm
+                        </button>
+                        <button type="button" class="list-group-item list-group-item-action mood-btn" data-mood="Focused">
+                            <i class="fas fa-bullseye me-2"></i> Focused
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Source selection -->
+            <div class="card mt-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Music Sources</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="jiosaavn" id="jiosaavnSource" checked>
+                        <label class="form-check-label" for="jiosaavnSource">
+                            JioSaavn
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="soundcloud" id="soundcloudSource" checked>
+                        <label class="form-check-label" for="soundcloudSource">
+                            SoundCloud
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main content - Player and tracks -->
+        <div class="col-md-9">
+            <!-- Now playing widget -->
+            <div class="card mb-3 now-playing-card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img id="nowPlayingImg" src="{% static 'img/default-artwork.jpg' %}" class="img-fluid rounded album-cover" alt="Album cover">
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="card-title" id="nowPlayingTitle">Select a track to play</h5>
+                            <p class="card-text" id="nowPlayingArtist">-</p>
+                            <p class="card-text" id="nowPlayingSource"></p>
+                            
+                            <!-- Progress bar -->
+                            <div class="progress mb-3">
+                                <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <small id="currentTime">0:00</small>
+                                <small id="totalTime">0:00</small>
+                            </div>
+                            
+                            <!-- Player controls -->
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button id="prevBtn" class="btn btn-outline-secondary">
+                                    <i class="fas fa-step-backward"></i>
+                                </button>
+                                <button id="playPauseBtn" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <button id="nextBtn" class="btn btn-outline-secondary">
+                                    <i class="fas fa-step-forward"></i>
+                                </button>
+                                <button id="shuffleBtn" class="btn btn-outline-secondary">
+                                    <i class="fas fa-random"></i>
+                                </button>
+                                <button id="repeatBtn" class="btn btn-outline-secondary">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                                <button id="likeBtn" class="btn btn-outline-danger">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tracks list -->
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Tracks</h5>
+                    <span id="currentMood" class="badge bg-light text-dark">No mood selected</span>
+                </div>
+                <div class="card-body">
+                    <div id="tracksLoading" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading tracks...</p>
+                    </div>
+                    <div id="noTracksFound" class="text-center py-4 d-none">
+                        <i class="fas fa-music fa-3x text-muted mb-3"></i>
+                        <p>No tracks found for this mood. Try another mood or music source.</p>
+                    </div>
+                    <ul id="tracksList" class="list-group track-list">
+                        <!-- Tracks will be added here dynamically -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden audio element for playback -->
+<audio id="audioPlayer"></audio>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // DOM elements
+        const audioPlayer = document.getElementById('audioPlayer');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        const repeatBtn = document.getElementById('repeatBtn');
+        const likeBtn = document.getElementById('likeBtn');
+        const progressBar = document.getElementById('progressBar');
+        const currentTime = document.getElementById('currentTime');
+        const totalTime = document.getElementById('totalTime');
+        const tracksList = document.getElementById('tracksList');
+        const tracksLoading = document.getElementById('tracksLoading');
+        const noTracksFound = document.getElementById('noTracksFound');
+        const currentMood = document.getElementById('currentMood');
+        const nowPlayingImg = document.getElementById('nowPlayingImg');
+        const nowPlayingTitle = document.getElementById('nowPlayingTitle');
+        const nowPlayingArtist = document.getElementById('nowPlayingArtist');
+        const nowPlayingSource = document.getElementById('nowPlayingSource');
+        const jiosaavnSource = document.getElementById('jiosaavnSource');
+        const soundcloudSource = document.getElementById('soundcloudSource');
+        
+        // State
+        let tracks = [];
+        let currentTrackIndex = -1;
+        let isPlaying = false;
+        let currentMoodName = '';
+        let isShuffled = false;
+        let isRepeating = false;
+        let originalTracks = [];
+        
+        // Event listeners
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        prevBtn.addEventListener('click', playPreviousTrack);
+        nextBtn.addEventListener('click', playNextTrack);
+        shuffleBtn.addEventListener('click', toggleShuffle);
+        repeatBtn.addEventListener('click', toggleRepeat);
+        likeBtn.addEventListener('click', toggleLike);
+        
+        audioPlayer.addEventListener('timeupdate', updateProgress);
+        audioPlayer.addEventListener('ended', handleTrackEnd);
+        audioPlayer.addEventListener('canplay', function() {
+            totalTime.textContent = formatTime(audioPlayer.duration);
+        });
+        
+        // Add event listeners to mood buttons
+        document.querySelectorAll('.mood-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const mood = this.getAttribute('data-mood');
+                loadTracksByMood(mood);
+                
+                // Update active state
+                document.querySelectorAll('.mood-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+            });
+        });
+        
+        // Add event listeners to source checkboxes
+        jiosaavnSource.addEventListener('change', function() {
+            if (currentMoodName) {
+                loadTracksByMood(currentMoodName);
+            }
+        });
+        
+        soundcloudSource.addEventListener('change', function() {
+            if (currentMoodName) {
+                loadTracksByMood(currentMoodName);
+            }
+        });
+        
+        // Initialize with any tracks passed from the server
+        const initialTracks = {{ initial_tracks|safe }};
+        if (initialTracks && initialTracks.length > 0) {
+            tracks = initialTracks;
+            originalTracks = [...tracks];
+            renderTracks(tracks);
+            tracksLoading.classList.add('d-none');
+            currentMood.textContent = 'Trending';
+        } else {
+            loadTrendingTracks();
+        }
+        
+        // Functions
+        async function loadTracksByMood(mood) {
+            try {
+                // Show loading
+                tracksList.innerHTML = '';
+                tracksLoading.classList.remove('d-none');
+                noTracksFound.classList.add('d-none');
+                currentMoodName = mood;
+                currentMood.textContent = mood;
+                
+                let allTracks = [];
+                const sources = [];
+                let errors = [];
+                
+                if (jiosaavnSource.checked) {
+                    try {
+                        const jiosaavnTracks = await fetchJioSaavnTracks(mood);
+                        if (jiosaavnTracks.success && jiosaavnTracks.tracks) {
+                            allTracks = [...allTracks, ...jiosaavnTracks.tracks];
+                        } else if (jiosaavnTracks.error) {
+                            errors.push(`JioSaavn: ${jiosaavnTracks.error}`);
+                        }
+                    } catch (error) {
+                        errors.push('Error fetching JioSaavn tracks');
+                    }
+                }
+                
+                if (soundcloudSource.checked) {
+                    try {
+                        const soundcloudTracks = await fetchSoundCloudTracks(mood);
+                        if (soundcloudTracks.success && soundcloudTracks.tracks) {
+                            allTracks = [...allTracks, ...soundcloudTracks.tracks];
+                        } else if (soundcloudTracks.error) {
+                            errors.push(`SoundCloud: ${soundcloudTracks.error}`);
+                        }
+                    } catch (error) {
+                        errors.push('Error fetching SoundCloud tracks');
+                    }
+                }
+                
+                // Update UI
+                if (allTracks.length > 0) {
+                    tracks = allTracks;
+                    originalTracks = [...tracks];
+                    renderTracks(tracks);
+                    tracksLoading.classList.add('d-none');
+                } else {
+                    tracksLoading.classList.add('d-none');
+                    noTracksFound.classList.remove('d-none');
+                    
+                    // Show error messages if any
+                    if (errors.length > 0) {
+                        const errorList = errors.join(', ');
+                        document.getElementById('noTracksFound').innerHTML = `
+                            <i class="fas fa-music fa-3x text-muted mb-3"></i>
+                            <p>No tracks found for this mood.</p>
+                            <small class="text-danger">${errorList}</small>
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading tracks:', error);
+                tracksLoading.classList.add('d-none');
+                noTracksFound.classList.remove('d-none');
+                document.getElementById('noTracksFound').innerHTML = `
+                    <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+                    <p>An error occurred while loading tracks.</p>
+                    <small class="text-danger">Please try again later.</small>
+                `;
+            }
+        }
+        
+        async function fetchJioSaavnTracks(mood) {
+            try {
+                const response = await fetch(`/jiosaavn/api/tracks/mood/${mood}/`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    console.error('JioSaavn API error:', data.error);
+                    return {
+                        success: false,
+                        error: data.error || 'Failed to fetch tracks'
+                    };
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('Error fetching JioSaavn tracks:', error);
+                return {
+                    success: false,
+                    error: 'Network error while fetching tracks'
+                };
+            }
+        }
+        
+        async function fetchSoundCloudTracks(mood) {
+            try {
+                const response = await fetch(`/soundcloud/api/tracks/mood/${mood}/`);
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching SoundCloud tracks:', error);
+                return { tracks: [] };
+            }
+        }
+        
+        function renderTracks(tracks) {
+            tracksList.innerHTML = '';
+            
+            tracks.forEach((track, index) => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item track-item';
+                li.dataset.index = index;
+                
+                const html = `
+                    <div class="d-flex align-items-center">
+                        <img src="${track.artwork_url || '{% static "img/default-artwork.jpg" %}'}" class="track-thumb me-3" alt="${track.title}">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0">${track.title}</h6>
+                            <small class="text-muted">${track.artist}</small>
+                        </div>
+                        <span class="badge ${track.source === 'jiosaavn' ? 'bg-info' : 'bg-warning'} text-dark">
+                            ${track.source}
+                        </span>
+                        <button class="btn btn-sm btn-outline-primary ms-2 play-btn">
+                            <i class="fas fa-play"></i>
+                        </button>
+                    </div>
+                `;
+                
+                li.innerHTML = html;
+                tracksList.appendChild(li);
+                
+                // Add click event to play button
+                li.querySelector('.play-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    playTrack(index);
+                });
+                
+                // Add click event to list item
+                li.addEventListener('click', function() {
+                    playTrack(index);
+                });
+            });
+        }
+        
+        function playTrack(index) {
+            if (index >= 0 && index < tracks.length) {
+                currentTrackIndex = index;
+                const track = tracks[index];
+                
+                // Update now playing info
+                nowPlayingTitle.textContent = track.title;
+                nowPlayingArtist.textContent = track.artist;
+                nowPlayingSource.textContent = track.source;
+                
+                if (track.artwork_url) {
+                    nowPlayingImg.src = track.artwork_url;
+                } else {
+                    nowPlayingImg.src = '{% static "img/default-artwork.jpg" %}';
+                }
+                
+                // Set audio source and play
+                audioPlayer.src = track.stream_url;
+                audioPlayer.play()
+                    .then(() => {
+                        isPlaying = true;
+                        updatePlayPauseButton();
+                        
+                        // Update track list UI
+                        document.querySelectorAll('.track-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+                        
+                        const activeItem = document.querySelector(`.track-item[data-index="${index}"]`);
+                        if (activeItem) {
+                            activeItem.classList.add('active');
+                            activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                        
+                        // Record play
+                        recordPlay(track.id, track.source);
+                    })
+                    .catch(error => {
+                        console.error('Error playing track:', error);
+                        alert('Unable to play this track. Skipping to next track.');
+                        playNextTrack();
+                    });
+            }
+        }
+        
+        function recordPlay(trackId, source) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const url = source === 'jiosaavn' 
+                ? `/jiosaavn/api/tracks/${trackId}/play/` 
+                : `/soundcloud/api/tracks/${trackId}/play/`;
+                
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `mood=${currentMoodName}`
+            }).catch(error => {
+                console.error('Error recording play:', error);
+            });
+        }
+        
+        function togglePlayPause() {
+            if (currentTrackIndex === -1 && tracks.length > 0) {
+                // Nothing is playing yet, start with the first track
+                playTrack(0);
+                return;
+            }
+            
+            if (isPlaying) {
+                audioPlayer.pause();
+                isPlaying = false;
+            } else {
+                audioPlayer.play();
+                isPlaying = true;
+            }
+            
+            updatePlayPauseButton();
+        }
+        
+        function updatePlayPauseButton() {
+            const icon = playPauseBtn.querySelector('i');
+            if (isPlaying) {
+                icon.className = 'fas fa-pause';
+            } else {
+                icon.className = 'fas fa-play';
+            }
+        }
+        
+        function playPreviousTrack() {
+            if (currentTrackIndex > 0) {
+                playTrack(currentTrackIndex - 1);
+            } else if (tracks.length > 0) {
+                // Wrap around to the last track
+                playTrack(tracks.length - 1);
+            }
+        }
+        
+        function playNextTrack() {
+            if (currentTrackIndex < tracks.length - 1) {
+                playTrack(currentTrackIndex + 1);
+            } else if (tracks.length > 0) {
+                // Wrap around to the first track
+                playTrack(0);
+            }
+        }
+        
+        function handleTrackEnd() {
+            if (isRepeating) {
+                // Replay the current track
+                audioPlayer.currentTime = 0;
+                audioPlayer.play();
+            } else {
+                playNextTrack();
+            }
+        }
+        
+        function updateProgress() {
+            const duration = audioPlayer.duration;
+            const currentTimeValue = audioPlayer.currentTime;
+            
+            if (duration) {
+                const percentage = (currentTimeValue / duration) * 100;
+                progressBar.style.width = `${percentage}%`;
+                currentTime.textContent = formatTime(currentTimeValue);
+            }
+        }
+        
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds === Infinity) return '0:00';
+            
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${minutes}:${secs < 10 ? '0' + secs : secs}`;
+        }
+        
+        function toggleShuffle() {
+            isShuffled = !isShuffled;
+            shuffleBtn.classList.toggle('active', isShuffled);
+            
+            if (isShuffled) {
+                // Save original tracks order
+                originalTracks = [...tracks];
+                
+                // Shuffle tracks
+                for (let i = tracks.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [tracks[i], tracks[j]] = [tracks[j], tracks[i]];
+                }
+                
+                // Update current track index
+                if (currentTrackIndex !== -1) {
+                    const currentTrack = originalTracks[currentTrackIndex];
+                    currentTrackIndex = tracks.findIndex(track => track.id === currentTrack.id);
+                }
+                
+                renderTracks(tracks);
+            } else {
+                // Restore original tracks order
+                tracks = [...originalTracks];
+                
+                // Update current track index
+                if (currentTrackIndex !== -1) {
+                    const currentTrack = tracks[currentTrackIndex];
+                    currentTrackIndex = originalTracks.findIndex(track => track.id === currentTrack.id);
+                }
+                
+                renderTracks(tracks);
+            }
+        }
+        
+        function toggleRepeat() {
+            isRepeating = !isRepeating;
+            repeatBtn.classList.toggle('active', isRepeating);
+        }
+        
+        function toggleLike() {
+            if (currentTrackIndex === -1) return;
+            
+            const track = tracks[currentTrackIndex];
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const url = track.source === 'jiosaavn' 
+                ? `/jiosaavn/api/tracks/${track.id}/like/` 
+                : `/soundcloud/api/tracks/${track.id}/like/`;
+                
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const icon = likeBtn.querySelector('i');
+                
+                if (data.action === 'liked') {
+                    icon.className = 'fas fa-heart';
+                    likeBtn.classList.add('btn-danger');
+                    likeBtn.classList.remove('btn-outline-danger');
+                } else {
+                    icon.className = 'far fa-heart';
+                    likeBtn.classList.remove('btn-danger');
+                    likeBtn.classList.add('btn-outline-danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling like:', error);
+            });
+        }
+        
+        // Load trending tracks on page load
+        async function loadTrendingTracks() {
+            tracksLoading.classList.remove('d-none');
+            
+            try {
+                const jiosaavnPromise = fetch('/jiosaavn/api/tracks/trending/')
+                    .then(res => res.json());
+                const soundcloudPromise = fetch('/soundcloud/api/tracks/trending/')
+                    .then(res => res.json());
+                
+                const [jiosaavnData, soundcloudData] = await Promise.all([
+                    jiosaavnPromise, 
+                    soundcloudPromise
+                ]);
+                
+                let allTracks = [];
+                
+                if (jiosaavnData.success && jiosaavnData.tracks) {
+                    allTracks = [...allTracks, ...jiosaavnData.tracks];
+                }
+                
+                if (soundcloudData.success && soundcloudData.tracks) {
+                    allTracks = [...allTracks, ...soundcloudData.tracks];
+                }
+                
+                if (allTracks.length > 0) {
+                    tracks = allTracks;
+                    originalTracks = [...tracks];
+                    renderTracks(tracks);
+                    tracksLoading.classList.add('d-none');
+                    currentMood.textContent = 'Trending';
+                } else {
+                    tracksLoading.classList.add('d-none');
+                    noTracksFound.classList.remove('d-none');
+                }
+            } catch (error) {
+                console.error('Error loading trending tracks:', error);
+                tracksLoading.classList.add('d-none');
+                noTracksFound.classList.remove('d-none');
+            }
+        }
+        
+        // Add error handling for audio playback
+        audioPlayer.addEventListener('error', function(e) {
+            console.error('Error playing track:', e);
+            alert('Unable to play this track. Skipping to next track.');
+            playNextTrack();
+        });
+    });
+</script>
+{% endblock %} 

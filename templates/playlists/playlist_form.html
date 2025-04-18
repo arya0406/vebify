@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if playlist %}Edit{% else %}Create{% endif %} Playlist - Mood Music{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bg-white rounded-xl shadow-sm p-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">
+            {% if playlist %}Edit{% else %}Create{% endif %} Playlist
+        </h1>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Name -->
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                <input type="text" name="name" id="name" 
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                       value="{{ playlist.name|default:'' }}" required>
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea name="description" id="description" rows="3" 
+                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary">{{ playlist.description|default:'' }}</textarea>
+            </div>
+
+            <!-- Mood -->
+            <div>
+                <label for="mood" class="block text-sm font-medium text-gray-700">Mood</label>
+                <select name="mood" id="mood" 
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary">
+                    <option value="">Select a mood</option>
+                    {% for mood in moods %}
+                        <option value="{{ mood.id }}" {% if playlist.mood.id == mood.id %}selected{% endif %}>
+                            {{ mood.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Privacy -->
+            <div class="flex items-center">
+                <input type="checkbox" name="is_public" id="is_public" 
+                       class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                       {% if not playlist or playlist.is_public %}checked{% endif %}>
+                <label for="is_public" class="ml-2 block text-sm text-gray-700">
+                    Make this playlist public
+                </label>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-end space-x-4">
+                <a href="{% url 'playlists:playlist_list' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    Cancel
+                </a>
+                <button type="submit" 
+                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    {% if playlist %}Save Changes{% else %}Create Playlist{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %} 

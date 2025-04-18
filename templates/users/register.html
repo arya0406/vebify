@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Register - Mood Music{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-500 to-indigo-600 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl w-full bg-white rounded-xl shadow-2xl overflow-hidden transition-all duration-300 hover:shadow-3xl">
+        <div class="md:flex">
+            <div class="md:w-1/2 bg-gradient-to-br from-purple-600 to-indigo-800 p-8 text-white flex flex-col justify-center">
+                <h2 class="text-3xl font-bold mb-6">Join Our Music Community</h2>
+                <p class="mb-6">Discover music based on your mood and create personalized playlists.</p>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center">
+                        <div class="bg-white/20 rounded-full p-2 mr-3">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/>
+                            </svg>
+                        </div>
+                        <span>Personalized mood-based playlists</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="bg-white/20 rounded-full p-2 mr-3">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
+                            </svg>
+                        </div>
+                        <span>Face detection for mood recognition</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="bg-white/20 rounded-full p-2 mr-3">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span>Create and share your favorites</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="md:w-1/2 p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Create Your Account</h2>
+                
+                <!-- Email Registration Form -->
+                <form method="post" novalidate id="register-form">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    
+                    <div class="mt-4 mb-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="termsCheck" name="terms" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                            <label for="termsCheck" class="ml-2 block text-sm text-gray-700">
+                                I agree to the <a href="#" class="text-indigo-600 hover:text-indigo-500">Terms of Service</a> and <a href="#" class="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+                            </label>
+                        </div>
+                        <div id="terms-error" class="hidden text-red-500 text-xs mt-1"></div>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mb-4">
+                        Sign Up
+                    </button>
+                    
+                    <p class="text-center text-sm text-gray-600">
+                        Already have an account? 
+                        <a href="{% url 'login' %}" class="text-indigo-600 hover:text-indigo-500 font-medium transition-colors duration-200">Login</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('register-form');
+        const termsCheck = document.getElementById('termsCheck');
+        const termsError = document.getElementById('terms-error');
+        
+        // Enhanced form validation
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            
+            // Reset error message
+            termsError.classList.add('hidden');
+            
+            // Validate terms checkbox
+            if (!termsCheck.checked) {
+                e.preventDefault();
+                termsError.textContent = 'You must agree to the Terms of Service and Privacy Policy';
+                termsError.classList.remove('hidden');
+                isValid = false;
+            }
+            
+            // Password validation
+            const passwordInput = document.querySelector('input[type="password"]');
+            const passwordValue = passwordInput.value;
+            
+            if (passwordValue.length < 8) {
+                e.preventDefault();
+                const passwordGroup = passwordInput.closest('.form-group');
+                const errorDiv = passwordGroup.querySelector('.invalid-feedback') || document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = 'Password must be at least 8 characters long';
+                errorDiv.style.display = 'block';
+                
+                if (!passwordGroup.querySelector('.invalid-feedback')) {
+                    passwordGroup.appendChild(errorDiv);
+                }
+                
+                passwordInput.classList.add('is-invalid');
+                isValid = false;
+            }
+            
+            return isValid;
+        });
+    });
+</script>
+{% endblock %} 

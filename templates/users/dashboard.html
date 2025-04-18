@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Dashboard - Mood Music{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Welcome Section -->
+    <div class="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-secondary">
+        <div class="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+        <div class="relative px-8 py-12">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="text-white">
+                    <h1 class="text-3xl font-bold mb-2">Welcome, {{ user.username }}!</h1>
+                    <p class="text-lg opacity-90">How are you feeling today?</p>
+                </div>
+                <a href="{% url 'moods:mood_list' %}" 
+                   class="inline-flex items-center px-6 py-3 bg-white text-primary rounded-lg hover:bg-opacity-90 transform hover:-translate-y-0.5 transition-all duration-200">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-7.536 5.879a1 1 0 001.415 0 3 3 0 014.242 0 1 1 0 001.415-1.415 5 5 0 00-7.072 0 1 1 0 000 1.415z"/>
+                    </svg>
+                    Select Your Mood
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Mood Selection -->
+    <div class="mb-12">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Quick Mood Selection</h2>
+        <div class="max-w-4xl mx-auto">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                {% for mood in moods %}
+                <a href="{% url 'moods:select_mood' mood.id %}" class="group">
+                    <div class="relative bg-white rounded-xl p-8 shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                        <div class="absolute inset-0 bg-gradient-to-r from-primary to-secondary opacity-0 group-hover:opacity-5 rounded-xl transition-opacity duration-300"></div>
+                        <div class="relative text-center">
+                            {% if mood.icon %}
+                                <img src="{{ mood.icon.url }}" alt="{{ mood.name }}" class="w-16 h-16 mx-auto mb-4">
+                            {% else %}
+                                <div class="w-16 h-16 mx-auto mb-4 text-5xl text-primary group-hover:scale-110 transition-transform duration-300">
+                                    {{ mood.emoji|default:"😊" }}
+                                </div>
+                            {% endif %}
+                            <h3 class="text-gray-900 font-medium text-lg">{{ mood.name }}</h3>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Recent Playlists -->
+        <div class="lg:col-span-2">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900 bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Your Recent Playlists</h2>
+                <a href="{% url 'playlists:playlist_list' %}" 
+                   class="text-primary hover:text-primary/80 font-medium flex items-center transition-colors duration-200 hover:scale-105 transform">
+                    View All
+                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% for playlist in playlists %}
+                <div class="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100">
+                    <div class="p-6">
+                        <div class="flex items-center mb-6">
+                            <div class="flex-shrink-0">
+                                {% if playlist.mood and playlist.mood.icon %}
+                                    <img src="{{ playlist.mood.icon.url }}" alt="{{ playlist.mood.name }}" class="w-14 h-14 rounded-xl shadow-md">
+                                {% else %}
+                                    <div class="w-14 h-14 bg-gradient-to-r from-primary to-secondary rounded-xl shadow-md flex items-center justify-center text-white">
+                                        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/>
+                                        </svg>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="ml-4 flex-grow">
+                                <h3 class="font-semibold text-gray-900 text-lg mb-1">{{ playlist.name }}</h3>
+                                <p class="text-sm text-gray-600 flex items-center">
+                                    {% if playlist.mood %}
+                                        <span class="flex items-center">
+                                            <span class="w-2 h-2 rounded-full bg-primary mr-2"></span>
+                                            {{ playlist.mood.name }}
+                                        </span>
+                                        <span class="mx-2">•</span>
+                                    {% endif %}
+                                    <span>{{ playlist.playlist_songs.count }} songs</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <a href="{% url 'playlists:playlist_detail' playlist.id %}" 
+                               class="inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:opacity-90 transition-all duration-200 shadow-sm hover:shadow-md">
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
+                                </svg>
+                                Play
+                            </a>
+                            <div class="flex items-center space-x-3">
+                                <button class="p-2 text-gray-600 hover:text-primary transition-colors duration-200 hover:scale-110 transform" title="Share">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                                    </svg>
+                                </button>
+                                {% if playlist.is_public %}
+                                    <span class="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full shadow-sm">Public</span>
+                                {% else %}
+                                    <span class="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full shadow-sm">Private</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-2 bg-white rounded-xl shadow-sm p-12 text-center border border-gray-100">
+                    <div class="w-20 h-20 mx-auto mb-6 text-primary">
+                        <svg class="w-full h-full" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-semibold text-gray-900 mb-3">No Playlists Yet</h3>
+                    <p class="text-gray-600 mb-8 text-lg">Start by selecting a mood to generate your first playlist!</p>
+                    <a href="{% url 'moods:mood_list' %}" 
+                       class="inline-flex items-center px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:opacity-90 transform hover:-translate-y-0.5 transition-all duration-200 shadow-md">
+                        Select Mood
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Mood History -->
+        <div>
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-primary/5 to-secondary/5">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Mood History</h2>
+                        <a href="{% url 'moods:mood_history' %}" 
+                           class="text-primary hover:text-primary/80 font-medium flex items-center transition-colors duration-200 hover:scale-105 transform">
+                            View All
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    {% for history in mood_history %}
+                    <div class="px-6 py-4 hover:bg-gray-50 transition-colors duration-200">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                {% if history.mood.icon %}
+                                    <img src="{{ history.mood.icon.url }}" alt="{{ history.mood.name }}" class="w-12 h-12 rounded-xl shadow-sm">
+                                {% else %}
+                                    <div class="w-12 h-12 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-xl shadow-sm flex items-center justify-center text-2xl">
+                                        {{ history.mood.emoji|default:"😊" }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="font-medium text-gray-900 text-lg mb-1">{{ history.mood.name }}</h3>
+                                <p class="text-sm text-gray-600 flex items-center">
+                                    <svg class="w-4 h-4 mr-1 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                    </svg>
+                                    {{ history.timestamp|date:"M d, Y" }} at {{ history.timestamp|time:"g:i A" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="px-6 py-10 text-center">
+                        <div class="w-16 h-16 mx-auto mb-4 text-gray-300">
+                            <svg class="w-full h-full" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <p class="text-gray-600 text-lg">No mood history yet</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

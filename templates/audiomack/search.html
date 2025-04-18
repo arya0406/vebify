@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Audiomack Search{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Search Audiomack</h1>
+    
+    <form method="get" action="{% url 'audiomack:search' %}" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Search for songs, artists, albums..." value="{{ query }}">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+    </form>
+    
+    {% if query %}
+        <h2 class="mb-3">Results for "{{ query }}"</h2>
+        
+        {% if results.error %}
+            <div class="alert alert-danger">
+                {{ results.error }}
+            </div>
+        {% elif results.data %}
+            <div class="row">
+                {% for item in results.data %}
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            {% if item.image_url %}
+                                <img src="{{ item.image_url }}" class="card-img-top" alt="{{ item.title }}">
+                            {% endif %}
+                            <div class="card-body">
+                                <h5 class="card-title">{{ item.title }}</h5>
+                                <p class="card-text">{{ item.artist_name }}</p>
+                                {% if item.url %}
+                                    <a href="{{ item.url }}" target="_blank" class="btn btn-sm btn-primary">Listen on Audiomack</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12">
+                        <p>No results found.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No results found.</p>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %} 

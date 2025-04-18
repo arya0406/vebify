@@ -1,0 +1,862 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ selected_mood }} Music - Music App{% endblock %}
+
+{% block extra_head %}
+<!-- Spotify Web Player SDK -->
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 mb-24" id="moodContainer" data-spotify-token="{{ spotify_token|default:'' }}">
+    <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center">
+            <a href="{% url 'moods:mood_list' %}" class="text-blue-600 hover:text-blue-800 mr-4 transition duration-300">
+                <svg class="w-6 h-6 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Moods
+            </a>
+            <h1 class="text-3xl font-bold">{{ selected_mood }} Music</h1>
+        </div>
+        {% if tracks %}
+        <div class="text-gray-600">
+            {{ track_count }} track{{ track_count|pluralize }} found
+        </div>
+        {% endif %}
+    </div>
+
+    {% if error %}
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+        </svg>
+        <div>
+            <p class="font-semibold">{{ error }}</p>
+            <p class="text-sm mt-1">Please try again or select a different mood.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if warning %}
+    <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4 flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+        </svg>
+        <div>
+            <p class="font-semibold">{{ warning }}</p>
+            <p class="text-sm mt-1">Try selecting a different mood or check back later.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div id="tracksContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% if tracks %}
+            {% for track in tracks %}
+            <div class="bg-white rounded-lg shadow-md overflow-hidden track-card hover:shadow-lg transition duration-300">
+                <div class="relative">
+                    <img src="{{ track.artwork|default:'/static/images/default-artwork.png' }}" 
+                         alt="{{ track.title }}" 
+                         class="w-full h-48 object-cover"
+                         onerror="this.src='{% static 'images/default-artwork.png' %}'">
+                </div>
+                <div class="p-4">
+                    <h3 class="font-semibold text-lg mb-1 truncate" title="{{ track.title }}">{{ track.title }}</h3>
+                    <p class="text-gray-600 mb-2 truncate" title="{{ track.artist }}">{{ track.artist }}</p>
+                    {% if track.album %}
+                    <p class="text-gray-500 text-sm mb-2 truncate" title="{{ track.album }}">{{ track.album }}</p>
+                    {% endif %}
+                    <div class="flex flex-col gap-2 mt-4">
+                        <button class="spotify-play-button bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 w-full transition duration-300 flex items-center justify-center"
+                                data-track-uri="{{ track.uri }}">
+                            <span class="flex items-center justify-center">
+                                <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                                </svg>
+                                <span class="button-text">Play</span>
+                            </span>
+                            <div class="loading-spinner hidden ml-2">
+                                <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-span-full text-center py-12">
+                <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                </svg>
+                <p class="text-xl text-gray-600 mb-2">No tracks found for {{ selected_mood }} mood</p>
+                <p class="text-gray-500">Try selecting a different mood or check back later</p>
+                <a href="{% url 'moods:mood_list' %}" class="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition duration-300">
+                    Browse Other Moods
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Audio Player -->
+    <div id="audioPlayer" class="fixed bottom-0 left-0 right-0 bg-white shadow-lg transform translate-y-full transition-transform duration-300 z-10">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center gap-4">
+                <img id="playerArtwork" class="w-16 h-16 object-cover rounded shadow" src="{% static 'images/default-artwork.png' %}" alt="Track artwork">
+                <div class="flex-grow">
+                    <h3 id="playerTitle" class="font-semibold truncate">Select a track to play</h3>
+                    <p id="playerArtist" class="text-gray-600 truncate">-</p>
+                    <div class="mt-2">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-grow">
+                                <div id="progressBar" class="h-2 bg-gray-200 rounded-full cursor-pointer">
+                                    <div id="progress" class="h-full bg-blue-600 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <span id="currentTime" class="text-sm text-gray-600 w-16 text-right font-mono">0:00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="relative group">
+                        <input type="range" id="volumeControl" min="0" max="1" step="0.1" value="1"
+                               class="w-20 accent-blue-600">
+                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            Volume
+                        </div>
+                    </div>
+                    <button id="playPauseButton" class="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition duration-300 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Play
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spotify Player Container -->
+    <div id="spotifyPlayerContainer" class="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-gray-900 to-black text-white transform translate-y-full transition-transform duration-300 z-20">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4 flex-1">
+                    <div id="spotifyPlayerInfo" class="flex items-center gap-3 flex-1">
+                        <div id="spotifyPlayerTrackInfo" class="text-sm flex-1">
+                            Not Playing
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button id="previousTrack" class="text-white hover:text-green-500 transition duration-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                    </button>
+                    <button id="spotifyPlayPause" class="bg-green-500 hover:bg-green-600 text-white rounded-full p-3 transition duration-300">
+                        <svg class="w-6 h-6 play-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                        </svg>
+                        <svg class="w-6 h-6 pause-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/>
+                        </svg>
+                    </button>
+                    <button id="nextTrack" class="text-white hover:text-green-500 transition duration-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                    <button id="toggleShuffle" class="text-white hover:text-green-500 transition duration-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6m16 0v8a2 2 0 01-2 2h-2m-4-8h2m-2 0h2m8-4v4m0 0l3-3m-3 3l-3-3" />
+                        </svg>
+                    </button>
+                    <div class="relative group">
+                        <input type="range" id="spotifyVolume" min="0" max="100" value="50"
+                               class="w-20 accent-green-500 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            Volume
+                        </div>
+                    </div>
+                    <button id="spotifyPlayerClose" class="text-white hover:text-red-500 transition duration-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            </div>
+            <div class="mt-2">
+                <div class="flex items-center gap-2">
+                    <span id="currentTime" class="text-xs text-gray-400 w-10">0:00</span>
+                    <div class="flex-1 h-1 bg-gray-700 rounded-full">
+                        <div id="progressBar" class="h-full bg-green-500 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <span id="duration" class="text-xs text-gray-400 w-10">0:00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Store Django template variables for JavaScript -->
+<script>
+    var SPOTIFY_TOKEN = "{{ spotify_token|default:'' }}";
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Spotify script loading
+    function loadSpotifyScript() {
+        return new Promise((resolve, reject) => {
+            if (window.Spotify) {
+                resolve(window.Spotify);
+                return;
+            }
+
+            window.onSpotifyWebPlaybackSDKReady = () => {
+                console.log('Spotify SDK Ready');
+                window.spotifySDKReady = true;
+                resolve(window.Spotify);
+            };
+
+            // Check if SDK is already loaded
+            const existingScript = document.querySelector('script[src="https://sdk.scdn.co/spotify-player.js"]');
+            if (existingScript) {
+                // If script exists but not ready, wait for it
+                const checkInterval = setInterval(() => {
+                    if (window.Spotify) {
+                        clearInterval(checkInterval);
+                        resolve(window.Spotify);
+                    }
+                }, 100);
+                return;
+            }
+
+            // If script doesn't exist, create and load it
+            const script = document.createElement('script');
+            script.src = 'https://sdk.scdn.co/spotify-player.js';
+            script.async = true;
+
+            script.onerror = () => {
+                reject(new Error('Failed to load Spotify SDK'));
+            };
+
+            document.head.appendChild(script);
+        });
+    }
+
+    const spotifyPlayerContainer = document.getElementById('spotifyPlayerContainer');
+    const spotifyPlayerTrackInfo = document.getElementById('spotifyPlayerTrackInfo');
+    const spotifyToken = document.getElementById('moodContainer').dataset.spotifyToken || '';
+    const audio = new Audio(); // Define the audio element
+    let currentTrackId = null;
+    let player = null;
+    let deviceId = null;
+    let isInitializing = false;
+    let initializationAttempts = 0;
+    const MAX_INITIALIZATION_ATTEMPTS = 3;
+    const INITIALIZATION_DELAY = 1000;
+
+    async function initializePlayer() {
+        if (isInitializing || initializationAttempts >= MAX_INITIALIZATION_ATTEMPTS) {
+            throw new Error('Player initialization failed after multiple attempts');
+        }
+        
+        isInitializing = true;
+        initializationAttempts++;
+
+        try {
+            console.log('Loading Spotify SDK...');
+            const Spotify = await loadSpotifyScript();
+            console.log('Spotify SDK loaded successfully');
+            
+            if (!player) {
+                console.log('Creating new player instance...');
+                player = new Spotify.Player({
+                    name: 'Web Playback SDK Player',
+            getOAuthToken: cb => { cb(spotifyToken); },
+            volume: 0.5
+        });
+
+                // Wait for player to be ready
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Player connection timeout'));
+                    }, 20000); // Increased timeout to 20 seconds
+
+                    player.addListener('ready', ({ device_id }) => {
+                        clearTimeout(timeout);
+                        console.log('Player ready with device ID:', device_id);
+                        deviceId = device_id;
+                        isInitializing = false;
+                        initializationAttempts = 0;
+                        resolve();
+                    });
+
+                    player.addListener('not_ready', () => {
+                        console.log('Device has gone offline');
+                        deviceId = null;
+                    });
+
+                    player.addListener('initialization_error', ({ message }) => {
+                        console.error('Failed to initialize:', message);
+                        reject(new Error('Player initialization failed: ' + message));
+                    });
+
+                    player.addListener('authentication_error', ({ message }) => {
+                        console.error('Authentication error:', message);
+                        window.location.href = '/spotify/login/';
+                    });
+
+                    player.addListener('account_error', ({ message }) => {
+                        console.error('Account error:', message);
+                        alert('Spotify Premium is required for playback');
+                    });
+
+                    // Connect to the player
+                    console.log('Connecting to Spotify player...');
+                    player.connect().then(success => {
+                        if (!success) {
+                            reject(new Error('Failed to connect to Spotify'));
+                        }
+                        console.log('Successfully connected to Spotify player');
+                    }).catch(reject);
+                });
+
+                // Set this device as active
+                console.log('Setting device as active...');
+                await fetch('https://api.spotify.com/v1/me/player', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${spotifyToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        device_ids: [deviceId],
+                        play: false
+                    }),
+                });
+                console.log('Device set as active');
+            }
+
+            return player;
+        } catch (error) {
+            console.error('Error initializing player:', error);
+            isInitializing = false;
+            player = null;
+            deviceId = null;
+            
+            if (initializationAttempts < MAX_INITIALIZATION_ATTEMPTS) {
+                console.log(`Retrying initialization (attempt ${initializationAttempts + 1})`);
+                await new Promise(resolve => setTimeout(resolve, INITIALIZATION_DELAY));
+                return initializePlayer();
+            }
+            throw error;
+        }
+    }
+
+    async function playTrack(button, uri) {
+        const spinner = button.querySelector('.loading-spinner');
+        const buttonText = button.querySelector('.button-text');
+        
+        try {
+            spinner.classList.remove('hidden');
+            buttonText.textContent = 'Connecting...';
+            
+            // Initialize player if needed
+            if (!player || !deviceId) {
+                await initializePlayer();
+            }
+            
+            if (!deviceId) {
+                throw new Error('No device ID available');
+            }
+
+            // Set active device and start playback
+            console.log('Starting playback...');
+            const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${spotifyToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ uris: [uri] }),
+            });
+
+                if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'Failed to play track');
+            }
+
+            buttonText.textContent = 'Playing';
+            spotifyPlayerContainer.classList.remove('translate-y-full');
+            spotifyPlayerTrackInfo.textContent = 'Loading track...';
+
+            // Update player state
+            player.getCurrentState().then(state => {
+                if (state) {
+                    const track = state.track_window.current_track;
+                    spotifyPlayerTrackInfo.textContent = `${track.name} - ${track.artists[0].name}`;
+                }
+            });
+
+        } catch (error) {
+            console.error('Error playing track:', error);
+            buttonText.textContent = 'Play';
+            
+            if (error.message.includes('Premium')) {
+                alert('Spotify Premium is required for playback');
+            } else if (error.message.includes('initialization failed after multiple attempts')) {
+                alert('Unable to connect to Spotify. Please refresh the page and try again.');
+            } else {
+                console.log('Retrying playback...');
+                player = null;
+                deviceId = null;
+                await playTrack(button, uri);
+            }
+        } finally {
+            spinner.classList.add('hidden');
+        }
+    }
+
+    // Initialize player when page loads
+    if (spotifyToken) {
+        // Delay initialization to ensure page is fully loaded
+        setTimeout(() => {
+            initializePlayer().catch(error => {
+                console.error('Initial player setup failed:', error);
+            });
+        }, 1000);
+    } else {
+        console.error('No Spotify token found');
+    }
+
+    // Handle play button clicks
+    document.querySelectorAll('.spotify-play-button').forEach(button => {
+        button.addEventListener('click', async function() {
+            const trackUri = this.dataset.trackUri;
+            if (!trackUri) return;
+            await playTrack(this, trackUri);
+        });
+    });
+
+    // Handle player close
+    document.getElementById('spotifyPlayerClose').addEventListener('click', () => {
+        spotifyPlayerContainer.classList.add('translate-y-full');
+        if (player) {
+            player.pause().catch(console.error);
+        }
+    });
+
+    // Handle preview play button clicks
+    document.querySelectorAll('.play-button').forEach(button => {
+        button.addEventListener('click', function() {
+            const trackId = this.dataset.trackId;
+            const previewUrl = this.dataset.previewUrl;
+            
+            if (!previewUrl) {
+                showNotification('Preview not available for this track', 'error');
+                return;
+            }
+
+            if (currentTrackId === trackId && !audio.paused) {
+                audio.pause();
+                updatePlayButtonState(this, false);
+                updatePlayerPlayButton(false);
+                return;
+            }
+
+            // Hide spotify player if visible
+            spotifyPlayerContainer.classList.add('translate-y-full');
+            
+            // Update audio source and play
+            audio.src = previewUrl;
+            audio.play().catch(error => {
+                showNotification('Error playing track: ' + error.message, 'error');
+                updatePlayButtonState(this, false);
+                updatePlayerPlayButton(false);
+            });
+
+            currentTrackId = trackId;
+
+            // Update player UI
+            const card = this.closest('.track-card');
+            document.getElementById('playerTitle').textContent = card.querySelector('h3').textContent;
+            document.getElementById('playerArtist').textContent = card.querySelector('p').textContent;
+            document.getElementById('playerArtwork').src = card.querySelector('img').src;
+            updatePlayerPlayButton(true);
+
+            // Show player
+            audioPlayer.classList.remove('translate-y-full');
+
+            // Update all play buttons
+            document.querySelectorAll('.play-button').forEach(btn => {
+                updatePlayButtonState(btn, btn.dataset.trackId === trackId && !audio.paused);
+            });
+        });
+    });
+
+    function updatePlayButtonState(button, isPlaying) {
+        const iconAndText = button.querySelector('span');
+        if (iconAndText) {
+            iconAndText.innerHTML = isPlaying ? 
+                `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>Pause` :
+                `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>Play Preview`;
+        }
+        button.classList.toggle('bg-green-600', isPlaying);
+        button.classList.toggle('hover:bg-green-700', isPlaying);
+        button.classList.toggle('bg-blue-600', !isPlaying);
+        button.classList.toggle('hover:bg-blue-700', !isPlaying);
+    }
+
+    function updatePlayerPlayButton(isPlaying) {
+        const button = document.getElementById('playPauseButton');
+        button.innerHTML = isPlaying ?
+            `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>Pause` :
+            `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>Play`;
+    }
+
+    // Play/Pause button in player
+    document.getElementById('playPauseButton').addEventListener('click', () => {
+        if (!audio.src) {
+            showNotification('Please select a track to play', 'warning');
+            return;
+        }
+        
+        if (audio.paused) {
+            audio.play().catch(error => {
+                showNotification('Error playing track: ' + error.message, 'error');
+            });
+            updatePlayerPlayButton(true);
+        } else {
+            audio.pause();
+            updatePlayerPlayButton(false);
+        }
+        
+        // Update track card button
+        const trackButton = document.querySelector(`[data-track-id="${currentTrackId}"]`);
+        if (trackButton) {
+            updatePlayButtonState(trackButton, !audio.paused);
+        }
+    });
+
+    // Volume control
+    const volumeControl = document.getElementById('volumeControl');
+    volumeControl.addEventListener('input', (e) => {
+        audio.volume = e.target.value;
+        volumeControl.title = `Volume: ${Math.round(e.target.value * 100)}%`;
+    });
+
+    // Progress bar
+    const progressBar = document.getElementById('progressBar');
+    const progress = document.getElementById('progress');
+    const currentTimeSpan = document.getElementById('currentTime');
+
+    progressBar.addEventListener('click', (e) => {
+        if (!audio.duration) return;
+        
+        const rect = progressBar.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / progressBar.offsetWidth;
+        audio.currentTime = pos * audio.duration;
+    });
+
+    audio.addEventListener('timeupdate', () => {
+        if (!audio.duration) return;
+        
+        const percent = (audio.currentTime / audio.duration) * 100;
+        progress.style.width = percent + '%';
+        currentTimeSpan.textContent = formatTime(audio.currentTime);
+    });
+
+    audio.addEventListener('ended', () => {
+        updatePlayerPlayButton(false);
+        progress.style.width = '0%';
+        currentTimeSpan.textContent = '0:00';
+        
+        // Reset play button state
+        const playButton = document.querySelector(`[data-track-id="${currentTrackId}"]`);
+        if (playButton) {
+            updatePlayButtonState(playButton, false);
+        }
+    });
+
+    audio.addEventListener('error', (e) => {
+        showNotification('Error loading track: ' + (e.message || 'Unknown error'), 'error');
+        updatePlayerPlayButton(false);
+        const playButton = document.querySelector(`[data-track-id="${currentTrackId}"]`);
+        if (playButton) {
+            updatePlayButtonState(playButton, false);
+        }
+    });
+
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        seconds = Math.floor(seconds % 60);
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 px-6 py-3 rounded shadow-lg transition-all duration-300 transform translate-x-full z-50 ${
+            type === 'error' ? 'bg-red-500 text-white' :
+            type === 'warning' ? 'bg-yellow-500 text-white' :
+            'bg-blue-500 text-white'
+        }`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.classList.remove('translate-x-full');
+        }, 100);
+        
+        // Remove after delay
+        setTimeout(() => {
+            notification.classList.add('translate-x-full');
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 3000);
+    }
+
+    // Add these functions after the existing playTrack function
+    async function togglePlayPause() {
+        if (!player) return;
+        
+        try {
+            const state = await player.getCurrentState();
+            if (!state) {
+                console.error('No track currently playing');
+                return;
+            }
+
+            const isPaused = state.paused;
+            if (isPaused) {
+                await player.resume();
+                updatePlayPauseButton(true);
+            } else {
+                await player.pause();
+                updatePlayPauseButton(false);
+            }
+        } catch (error) {
+            console.error('Error toggling play/pause:', error);
+        }
+    }
+
+    async function nextTrack() {
+        if (!player) return;
+        try {
+            await player.nextTrack();
+        } catch (error) {
+            console.error('Error skipping to next track:', error);
+        }
+    }
+
+    async function previousTrack() {
+        if (!player) return;
+        try {
+            await player.previousTrack();
+        } catch (error) {
+            console.error('Error going to previous track:', error);
+        }
+    }
+
+    async function toggleShuffle() {
+        if (!player) return;
+        try {
+            const state = await player.getCurrentState();
+            const shuffleState = !state.shuffle;
+            await fetch('https://api.spotify.com/v1/me/player/shuffle', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${spotifyToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ state: shuffleState }),
+            });
+            document.getElementById('toggleShuffle').classList.toggle('text-green-500', shuffleState);
+        } catch (error) {
+            console.error('Error toggling shuffle:', error);
+        }
+    }
+
+    function updatePlayPauseButton(isPlaying) {
+        const playIcon = document.querySelector('#spotifyPlayPause .play-icon');
+        const pauseIcon = document.querySelector('#spotifyPlayPause .pause-icon');
+        if (isPlaying) {
+            playIcon.classList.add('hidden');
+            pauseIcon.classList.remove('hidden');
+        } else {
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
+        }
+    }
+
+    // Add event listeners for the new controls
+    document.getElementById('spotifyPlayPause').addEventListener('click', togglePlayPause);
+    document.getElementById('nextTrack').addEventListener('click', nextTrack);
+    document.getElementById('previousTrack').addEventListener('click', previousTrack);
+    document.getElementById('toggleShuffle').addEventListener('click', toggleShuffle);
+
+    // Volume control
+    document.getElementById('spotifyVolume').addEventListener('input', async (e) => {
+        if (!player) return;
+        const volume = parseInt(e.target.value) / 100;
+        await player.setVolume(volume);
+    });
+
+    // Update progress bar
+    setInterval(async () => {
+        if (!player) return;
+        try {
+            const state = await player.getCurrentState();
+            if (!state) return;
+
+            const progress = (state.position / state.duration) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+            document.getElementById('currentTime').textContent = formatTime(state.position);
+            document.getElementById('duration').textContent = formatTime(state.duration);
+            updatePlayPauseButton(!state.paused);
+        } catch (error) {
+            console.error('Error updating progress:', error);
+        }
+    }, 1000);
+
+    // Add state change listener
+    if (player) {
+        player.addListener('player_state_changed', state => {
+            if (!state) return;
+            
+            updatePlayPauseButton(!state.paused);
+            document.getElementById('toggleShuffle').classList.toggle('text-green-500', state.shuffle);
+            
+            if (state.track_window.current_track) {
+                const track = state.track_window.current_track;
+                spotifyPlayerTrackInfo.textContent = `${track.name} - ${track.artists[0].name}`;
+            }
+        });
+    }
+
+    // Add seek controls
+    const SEEK_INTERVAL = 10; // 10 seconds for seek
+
+    function seekForward() {
+        if (!player) return;
+        player.getCurrentState().then(state => {
+            if (state) {
+                const newPosition = Math.min(state.position + (SEEK_INTERVAL * 1000), state.duration);
+                player.seek(newPosition);
+            }
+        });
+    }
+
+    function seekBackward() {
+        if (!player) return;
+        player.getCurrentState().then(state => {
+            if (state) {
+                const newPosition = Math.max(state.position - (SEEK_INTERVAL * 1000), 0);
+                player.seek(newPosition);
+            }
+        });
+    }
+
+    // Add keyboard shortcuts for seeking
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return; // Don't trigger when typing in input fields
+        
+        if (e.key === 'ArrowRight') {
+            seekForward();
+        } else if (e.key === 'ArrowLeft') {
+            seekBackward();
+        }
+    });
+
+    // Add seek buttons
+    const playerControls = document.querySelector('.flex.items-center.gap-4');
+    const seekBackwardButton = document.createElement('button');
+    seekBackwardButton.className = 'text-white hover:text-green-500 transition duration-300';
+    seekBackwardButton.innerHTML = `
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+        </svg>
+    `;
+    seekBackwardButton.title = 'Seek -10s';
+
+    const seekForwardButton = document.createElement('button');
+    seekForwardButton.className = 'text-white hover:text-green-500 transition duration-300';
+    seekForwardButton.innerHTML = `
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.933 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.933 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
+        </svg>
+    `;
+    seekForwardButton.title = 'Seek +10s';
+
+    // Insert seek buttons
+    playerControls.insertBefore(seekBackwardButton, playerControls.firstChild);
+    playerControls.insertBefore(seekForwardButton, playerControls.querySelector('#nextTrack').nextSibling);
+
+    // Add click handlers
+    seekBackwardButton.addEventListener('click', seekBackward);
+    seekForwardButton.addEventListener('click', seekForward);
+
+    // Add loading indicator
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden';
+    loadingOverlay.innerHTML = `
+        <div class="bg-white p-6 rounded-lg shadow-xl flex items-center">
+            <svg class="animate-spin h-8 w-8 text-green-500 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-gray-800 text-lg font-medium">Loading Player...</span>
+        </div>
+    `;
+    document.body.appendChild(loadingOverlay);
+
+    // Show loading overlay when initializing player
+    function showLoading() {
+        loadingOverlay.classList.remove('hidden');
+    }
+
+    function hideLoading() {
+        loadingOverlay.classList.add('hidden');
+    }
+
+    // Update initializePlayer function to show loading state
+    const originalInitializePlayer = initializePlayer;
+    initializePlayer = async function() {
+        showLoading();
+        try {
+            await originalInitializePlayer.apply(this, arguments);
+        } finally {
+            hideLoading();
+        }
+    };
+
+    // Update playTrack function to show loading state
+    const originalPlayTrack = playTrack;
+    playTrack = async function() {
+        showLoading();
+        try {
+            await originalPlayTrack.apply(this, arguments);
+        } finally {
+            hideLoading();
+        }
+    };
+});
+</script>
+{% endblock %} 

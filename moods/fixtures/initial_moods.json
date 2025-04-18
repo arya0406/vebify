@@ -1,0 +1,98 @@
+[
+    {
+        "model": "moods.mood",
+        "pk": 1,
+        "fields": {
+            "name": "Happy",
+            "description": "Feeling joyful and content",
+            "icon": "😊",
+            "quick_access": true,
+            "created_at": "2024-03-18T00:00:00Z",
+            "updated_at": "2024-03-18T00:00:00Z"
+        }
+    },
+    {
+        "model": "moods.mood",
+        "pk": 2,
+        "fields": {
+            "name": "Sad",
+            "description": "Feeling down or melancholic",
+            "icon": "😔",
+            "quick_access": true,
+            "created_at": "2024-03-18T00:00:00Z",
+            "updated_at": "2024-03-18T00:00:00Z"
+        }
+    },
+    {
+        "model": "moods.mood",
+        "pk": 3,
+        "fields": {
+            "name": "Dance",
+            "description": "Ready to move and groove",
+            "icon": "💃",
+            "quick_access": true,
+            "created_at": "2024-03-18T00:00:00Z",
+            "updated_at": "2024-03-18T00:00:00Z"
+        }
+    },
+    {
+        "model": "moods.mood",
+        "pk": 4,
+        "fields": {
+            "name": "Joy",
+            "description": "Pure happiness and excitement",
+            "icon": "🎉",
+            "quick_access": true,
+            "created_at": "2024-03-18T00:00:00Z",
+            "updated_at": "2024-03-18T00:00:00Z"
+        }
+    },
+    {
+        "model": "moods.mood",
+        "pk": 5,
+        "fields": {
+            "name": "Energetic",
+            "description": "Feeling full of energy and ready to go",
+            "icon": "⚡",
+            "quick_access": true,
+            "created_at": "2024-03-17T00:00:00Z",
+            "updated_at": "2024-03-17T00:00:00Z"
+        }
+    },
+    {
+        "model": "moods.mood",
+        "pk": 6,
+        "fields": {
+            "name": "Relaxed",
+            "description": "Feeling calm and peaceful",
+            "icon": "😌",
+            "quick_access": true,
+            "created_at": "2024-03-17T00:00:00Z",
+            "updated_at": "2024-03-17T00:00:00Z"
+        }
+    },
+    {
+        "model": "moods.mood",
+        "pk": 7,
+        "fields": {
+            "name": "Angry",
+            "description": "Feeling frustrated or annoyed",
+            "icon": "😠",
+            "quick_access": false,
+            "created_at": "2024-03-17T00:00:00Z",
+            "updated_at": "2024-03-17T00:00:00Z"
+        }
+    },
+    {
+        "model": "moods.mood",
+        "pk": 8,
+        "fields": {
+            "name": "Party",
+            "description": "Feeling ready to celebrate and dance",
+            "icon": "🎉",
+            "quick_access": false,
+            "created_at": "2024-03-17T00:00:00Z",
+            "updated_at": "2024-03-17T00:00:00Z"
+        }
+    }
+] 

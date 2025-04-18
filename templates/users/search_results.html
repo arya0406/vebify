@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Search Results for: {{ query }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4">
+    <h1 class="text-2xl font-bold mb-6">Search results for: "{{ query }}"</h1>
+    
+    {% if not moods and not playlists and not songs %}
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 text-center mb-8">
+            <h2 class="text-xl font-semibold mb-4">No results found</h2>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">We couldn't find any matches for "{{ query }}"</p>
+            <a href="{% url 'home' %}" class="inline-block bg-primary text-white py-2 px-4 rounded hover:bg-opacity-90">Return to Home</a>
+        </div>
+    {% endif %}
+    
+    <!-- Moods Section -->
+    {% if moods %}
+    <div class="mb-10">
+        <h2 class="text-xl font-semibold mb-4">Moods</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for mood in moods %}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+                <div class="p-4">
+                    <h3 class="text-lg font-medium">
+                        <a href="{% url 'moods:detail' mood.slug %}" class="text-primary hover:text-opacity-80">
+                            {{ mood.name }}
+                        </a>
+                        {% if mood.language %}
+                        <span class="text-sm text-gray-500 dark:text-gray-400 ml-2">({{ mood.get_language_display }})</span>
+                        {% endif %}
+                    </h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">{{ mood.description|truncatechars:100 }}</p>
+                </div>
+                <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700 flex justify-between items-center">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ mood.category|title }}</span>
+                    <a href="{% url 'moods:detail' mood.slug %}" class="text-primary text-sm hover:underline">Explore</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Playlists Section -->
+    {% if playlists %}
+    <div class="mb-10">
+        <h2 class="text-xl font-semibold mb-4">Playlists</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for playlist in playlists %}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+                <div class="p-4">
+                    <h3 class="text-lg font-medium">
+                        <a href="{% url 'playlists:detail' playlist.id %}" class="text-primary hover:text-opacity-80">
+                            {{ playlist.name }}
+                        </a>
+                    </h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mt-1">Created by {{ playlist.user.username }}</p>
+                </div>
+                <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700 flex justify-between items-center">
+                    <span class="text-sm text-gray-500 dark:text-gray-400">{{ playlist.songs.count }} songs</span>
+                    <a href="{% url 'playlists:detail' playlist.id %}" class="text-primary text-sm hover:underline">View</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Songs Section -->
+    {% if songs %}
+    <div class="mb-10">
+        <h2 class="text-xl font-semibold mb-4">Songs</h2>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+            <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+                {% for song in songs %}
+                <li class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <div class="p-4 flex items-center">
+                        <div class="w-12 h-12 flex-shrink-0 mr-4">
+                            {% if song.album.images %}
+                            <img src="{{ song.album.images.0.url }}" alt="{{ song.album.name }}" class="w-full h-full object-cover rounded">
+                            {% else %}
+                            <div class="w-full h-full bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center">
+                                <i class="fas fa-music text-gray-400"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow min-w-0">
+                            <h3 class="font-medium text-gray-900 dark:text-white truncate">{{ song.name }}</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                {{ song.artists|join:", " }}
+                            </p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            {% if song.preview_url %}
+                            <button onclick="playPreview('{{ song.preview_url }}')" 
+                                    class="text-gray-700 dark:text-gray-300 hover:text-primary p-2">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            {% endif %}
+                            
+                            {% if user.is_spotify_connected %}
+                            <button onclick="playTrackOnSpotify('{{ song.uri }}')"
+                                    class="text-green-600 hover:text-green-700 p-2" 
+                                    title="Play on Spotify">
+                                <i class="fab fa-spotify"></i>
+                            </button>
+                            {% endif %}
+                            
+                            <button onclick="showAddToPlaylistModal('{{ song.id }}', '{{ song.name|escapejs }}', '{{ song.artists.0.name|escapejs }}')" 
+                                    class="text-gray-700 dark:text-gray-300 hover:text-primary p-2">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Add to Playlist Modal -->
+    <div id="addToPlaylistModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Add to Playlist</h3>
+            </div>
+            <div class="p-6">
+                <p class="mb-4 text-gray-700 dark:text-gray-300">
+                    Add <span id="songToAdd" class="font-medium"></span> to a playlist:
+                </p>
+                
+                <div id="playlistsLoading" class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin text-primary text-2xl"></i>
+                </div>
+                
+                <div id="playlistsContainer" class="hidden">
+                    <div id="noPlaylists" class="hidden py-4 text-gray-600 dark:text-gray-400 text-center">
+                        You don't have any playlists yet. Create one first!
+                    </div>
+                    
+                    <ul id="playlistsList" class="max-h-60 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700"></ul>
+                </div>
+                
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button id="cancelAddToPlaylist" 
+                            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        Cancel
+                    </button>
+                    <a href="{% url 'playlists:playlist_create' %}" 
+                       class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600">
+                        Create New Playlist
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentSongId = null;
+    const modal = document.getElementById('addToPlaylistModal');
+    const playlistsLoading = document.getElementById('playlistsLoading');
+    const playlistsContainer = document.getElementById('playlistsContainer');
+    const playlistsList = document.getElementById('playlistsList');
+    const noPlaylists = document.getElementById('noPlaylists');
+    const songToAdd = document.getElementById('songToAdd');
+    const cancelBtn = document.getElementById('cancelAddToPlaylist');
+    
+    // Open modal to add song to playlist
+    function showAddToPlaylistModal(songId, songName, artistName) {
+        currentSongId = songId;
+        songToAdd.textContent = `${songName} by ${artistName}`;
+        
+        // Show modal
+        modal.classList.remove('hidden');
+        
+        // Show loading state
+        playlistsLoading.classList.remove('hidden');
+        playlistsContainer.classList.add('hidden');
+        
+        // Fetch user playlists
+        fetchUserPlaylists();
+    }
+    
+    // Fetch user playlists
+    async function fetchUserPlaylists() {
+        try {
+            const response = await fetch('/playlists/api/user-playlists/');
+            const data = await response.json();
+            
+            if (data.success) {
+                renderPlaylists(data.playlists);
+            } else {
+                console.error('Error fetching playlists:', data.error);
+                noPlaylists.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Error fetching playlists:', error);
+            noPlaylists.classList.remove('hidden');
+        } finally {
+            playlistsLoading.classList.add('hidden');
+            playlistsContainer.classList.remove('hidden');
+        }
+    }
+    
+    // Render playlists in the modal
+    function renderPlaylists(playlists) {
+        playlistsList.innerHTML = '';
+        
+        if (playlists.length === 0) {
+            noPlaylists.classList.remove('hidden');
+            return;
+        }
+        
+        noPlaylists.classList.add('hidden');
+        
+        playlists.forEach(playlist => {
+            const li = document.createElement('li');
+            li.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer';
+            li.innerHTML = `
+                <div class="p-3" onclick="addSongToPlaylist('${playlist.id}', '${playlist.name}')">
+                    <div class="font-medium">${playlist.name}</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">${playlist.song_count} songs</div>
+                </div>
+            `;
+            playlistsList.appendChild(li);
+        });
+    }
+    
+    // Add song to selected playlist
+    async function addSongToPlaylist(playlistId, playlistName) {
+        if (!currentSongId) return;
+        
+        try {
+            const response = await fetch(`/playlists/${playlistId}/add-song/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    song_id: currentSongId
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                alert(`Song added to "${playlistName}" successfully!`);
+                closeModal();
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('Error adding song to playlist:', error);
+            alert('Failed to add song to playlist. Please try again.');
+        }
+    }
+    
+    // Close the modal
+    function closeModal() {
+        modal.classList.add('hidden');
+        currentSongId = null;
+    }
+    
+    // Close modal when clicking cancel
+    cancelBtn.addEventListener('click', closeModal);
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %} 

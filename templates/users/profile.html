@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ user.username }}'s Profile - Mood Music{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Profile Header -->
+    <div class="mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <div class="p-6">
+                <div class="flex flex-col md:flex-row items-center gap-6">
+                    <div class="flex-shrink-0">
+                        {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" alt="Profile Picture" 
+                                 class="w-32 h-32 rounded-full object-cover ring-4 ring-primary/20">
+                        {% else %}
+                            <div class="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center ring-4 ring-primary/20">
+                                <i class="fas fa-user text-4xl text-white"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow text-center md:text-left">
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{{ user.username }}</h1>
+                        <p class="text-gray-600 dark:text-gray-400 mb-3">{{ user.email }}</p>
+                        {% if user.bio %}
+                            <p class="text-gray-700 dark:text-gray-300 mb-4">{{ user.bio }}</p>
+                        {% endif %}
+                        <div class="flex flex-wrap gap-3 justify-center md:justify-start">
+                            <a href="{% url 'profile_edit' %}" 
+                               class="inline-flex items-center px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors duration-200">
+                                <i class="fas fa-edit mr-2"></i> Edit Profile
+                            </a>
+                            <a href="{% url 'password_reset' %}" 
+                               class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200">
+                                <i class="fas fa-key mr-2"></i> Change Password
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Playlists Section -->
+    <div>
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Your Playlists</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for playlist in playlists %}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-200">
+                <div class="p-4">
+                    <div class="flex items-center mb-4">
+                        <div class="flex-shrink-0">
+                            {% if playlist.mood and playlist.mood.icon %}
+                                <img src="{{ playlist.mood.icon.url }}" alt="{{ playlist.mood.name }}" 
+                                     class="w-12 h-12 rounded-lg object-cover">
+                            {% else %}
+                                <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">
+                                    <i class="fas fa-music text-white"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="font-semibold text-gray-900 dark:text-white">{{ playlist.name }}</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                {% if playlist.mood %}{{ playlist.mood.name }} • {% endif %}
+                                {{ playlist.playlist_songs.count }} songs
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <a href="{% url 'playlists:playlist_detail' playlist.id %}" 
+                           class="inline-flex items-center px-3 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors duration-200">
+                            <i class="fas fa-play mr-2"></i> Play
+                        </a>
+                        <div class="flex items-center gap-2">
+                            <button class="p-1.5 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary-light transition-colors duration-200" title="Share">
+                                <i class="fas fa-share-alt"></i>
+                            </button>
+                            {% if playlist.is_public %}
+                                <span class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">Public</span>
+                            {% else %}
+                                <span class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full">Private</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+                    <i class="fas fa-music text-6xl text-gray-400 dark:text-gray-600 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Playlists Yet</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-6">Start creating playlists by selecting your mood!</p>
+                    <a href="{% url 'moods:mood_list' %}" 
+                       class="inline-flex items-center px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors duration-200">
+                        <i class="fas fa-plus mr-2"></i> Select Mood
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,568 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Face Mood Detection - Mood Music{% endblock %}
+
+{% block extra_css %}
+<style>
+    .webcam-container {
+        position: relative;
+        width: 100%;
+        max-width: 640px;
+        margin: 0 auto;
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    #webcam {
+        width: 100%;
+        height: 480px;
+        object-fit: cover;
+        border-radius: 1rem;
+    }
+    
+    .emotion-indicator {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        font-weight: 600;
+        backdrop-filter: blur(4px);
+        z-index: 10;
+    }
+    
+    .capture-btn {
+        position: absolute;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 1rem 2.5rem;
+        border-radius: 9999px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(4px);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .capture-btn:hover {
+        background: rgba(0, 0, 0, 0.9);
+        transform: translateX(-50%) scale(1.05);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .capture-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .close-btn {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(4px);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        z-index: 10;
+    }
+    
+    .close-btn:hover {
+        background: rgba(0, 0, 0, 0.9);
+        transform: scale(1.05);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+        backdrop-filter: blur(4px);
+        z-index: 20;
+    }
+    
+    .spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+    }
+    
+    .loading-text {
+        color: white;
+        font-weight: 600;
+    }
+    
+    .error-message {
+        background: #FEE2E2;
+        border: 1px solid #F87171;
+        color: #B91C1C;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        display: none;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .mood-card {
+        background: white;
+        border-radius: 1rem;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .mood-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .mood-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .confidence-meter {
+        width: 100%;
+        height: 8px;
+        background: #E5E7EB;
+        border-radius: 4px;
+        margin-top: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .confidence-fill {
+        height: 100%;
+        background: linear-gradient(to right, #3B82F6, #6366F1);
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+    
+    .captured-image-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: none;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 15;
+    }
+    
+    .captured-image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 1rem;
+    }
+    
+    .capture-controls {
+        position: absolute;
+        bottom: 1.5rem;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        z-index: 16;
+    }
+    
+    .retake-btn, .use-photo-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(4px);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .retake-btn {
+        background: rgba(239, 68, 68, 0.8);
+        color: white;
+    }
+    
+    .use-photo-btn {
+        background: rgba(16, 185, 129, 0.8);
+        color: white;
+    }
+    
+    .retake-btn:hover, .use-photo-btn:hover {
+        transform: scale(1.05);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    #webcam {
+        cursor: pointer;
+    }
+    
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .metric-card {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+        border: 1px solid rgba(99, 102, 241, 0.1);
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        background: linear-gradient(to right, #3B82F6, #6366F1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0.5rem 0;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        color: #6B7280;
+    }
+    
+    .metric-icon {
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Face Mood Detection</h1>
+        <p class="text-xl text-gray-600">Let us detect your mood through your facial expression</p>
+    </div>
+
+    <div class="error-message mb-4" id="error-message"></div>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                    <div class="webcam-container">
+                        <video id="webcam" autoplay playsinline></video>
+                        <div class="emotion-indicator hidden" id="emotion-indicator"></div>
+                        <a href="{% url 'dashboard' %}" class="close-btn" id="close-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                            </svg>
+                        </a>
+                        <button class="capture-btn" id="capture-btn" disabled>
+                            <i class="fas fa-camera mr-2"></i> Capture Mood
+                        </button>
+                        <div class="loading-overlay hidden" id="loading-overlay">
+                            <div class="spinner"></div>
+                            <div class="loading-text">Analyzing your mood...</div>
+                        </div>
+                        <div class="captured-image-container" id="captured-image-container">
+                            <img id="captured-image" class="captured-image" alt="Captured photo">
+                            <div class="capture-controls">
+                                <button class="retake-btn" id="retake-btn">
+                                    <i class="fas fa-redo mr-2"></i> Retake
+                                </button>
+                                <button class="use-photo-btn" id="use-photo-btn">
+                                    <i class="fas fa-check mr-2"></i> Use Photo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="result-section" class="hidden">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6">Your Mood Results</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="mood-card">
+                                <div class="mood-icon" id="mood-icon"></div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Detected Mood</h3>
+                                <p id="detected-mood" class="text-3xl font-bold text-primary"></p>
+                                <p class="text-sm text-gray-500 mt-2">Confidence Level</p>
+                                <div class="confidence-meter">
+                                    <div class="confidence-fill" id="confidence-fill" style="width: 0%"></div>
+                                </div>
+                                <div class="metrics-grid mt-4">
+                                    <div class="metric-card">
+                                        <div class="metric-icon">👁️</div>
+                                        <div class="metric-value" id="eye-contact-value">0%</div>
+                                        <div class="metric-label">Eye Contact</div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-icon">🎯</div>
+                                        <div class="metric-value" id="attention-value">0%</div>
+                                        <div class="metric-label">Attention</div>
+                                    </div>
+                                    <div class="metric-card">
+                                        <div class="metric-icon">✨</div>
+                                        <div class="metric-value" id="engagement-value">0%</div>
+                                        <div class="metric-label">Engagement</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mood-card">
+                                <div class="mood-icon">🎵</div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Recommended Playlist</h3>
+                                <div id="playlist-recommendation"></div>
+                            </div>
+                        </div>
+                        <div class="mt-8 flex justify-center space-x-4">
+                            <button id="try-again-btn" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200">
+                                <i class="fas fa-redo mr-2"></i> Try Again
+                            </button>
+                            <a href="{% url 'dashboard' %}" class="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors duration-200">
+                                <i class="fas fa-home mr-2"></i> Back to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Add SoundCloud player to the right side -->
+            <div class="col-md-6">
+                <div class="bg-white rounded-xl shadow-lg p-0 h-100">
+                    <div class="card-header bg-primary text-white py-3 px-4">
+                        <h2 class="mb-0 text-center">Mood Music Player</h2>
+                    </div>
+                    <iframe id="music-player-iframe" src="{{ soundcloud_player_url }}" 
+                            width="100%" height="700" frameborder="0" class="border-0"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const video = document.getElementById('webcam');
+    const captureBtn = document.getElementById('capture-btn');
+    const emotionIndicator = document.getElementById('emotion-indicator');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const resultSection = document.getElementById('result-section');
+    const detectedMood = document.getElementById('detected-mood');
+    const moodIcon = document.getElementById('mood-icon');
+    const playlistRecommendation = document.getElementById('playlist-recommendation');
+    const tryAgainBtn = document.getElementById('try-again-btn');
+    const errorMessage = document.getElementById('error-message');
+    const confidenceFill = document.getElementById('confidence-fill');
+    const capturedImageContainer = document.getElementById('captured-image-container');
+    const capturedImage = document.getElementById('captured-image');
+    const retakeBtn = document.getElementById('retake-btn');
+    const usePhotoBtn = document.getElementById('use-photo-btn');
+    const eyeContactValue = document.getElementById('eye-contact-value');
+    const attentionValue = document.getElementById('attention-value');
+    const engagementValue = document.getElementById('engagement-value');
+
+    const moodIcons = {
+        'happy': '😊',
+        'calm': '😌',
+        'energetic': '⚡',
+        'relaxed': '😎',
+        'focused': '🎯',
+        'love': '❤️',
+        'confidence': '💪',
+        'anger': '😠',
+        'sad': '😔',
+        'dance': '💃',
+        'joy': '🎉',
+        'nostalgia': '📷',
+        'frustration': '😤',
+        'excitement': '🌟'
+    };
+
+    // Start webcam
+    async function startWebcam() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: 'user'
+                } 
+            });
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                captureBtn.disabled = false;
+            };
+        } catch (err) {
+            console.error('Error accessing webcam:', err);
+            showError('Unable to access webcam. Please make sure you have granted permission and no other application is using the camera.');
+        }
+    }
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        setTimeout(() => {
+            errorMessage.style.display = 'none';
+        }, 5000);
+    }
+
+    function captureImage() {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        // Display the captured image
+        capturedImage.src = canvas.toDataURL('image/jpeg');
+        capturedImageContainer.style.display = 'block';
+    }
+
+    function retakePhoto() {
+        capturedImageContainer.style.display = 'none';
+    }
+
+    async function usePhoto() {
+        captureBtn.disabled = true;
+        loadingOverlay.classList.remove('hidden');
+        
+        try {
+            // Convert the captured image to a blob
+            const response = await fetch(capturedImage.src);
+            const blob = await response.blob();
+            
+            const formData = new FormData();
+            formData.append('image', blob, 'capture.jpg');
+
+            const result = await fetch('/mood-detection/detect/', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await result.json();
+
+            if (data.success) {
+                const mood = data.mood;
+                detectedMood.textContent = mood;
+                moodIcon.textContent = moodIcons[mood.toLowerCase()] || '🎭';
+                emotionIndicator.textContent = `Mood: ${mood}`;
+                emotionIndicator.classList.remove('hidden');
+                resultSection.classList.remove('hidden');
+                
+                // Set confidence meter
+                const confidence = data.confidence || 0.5;
+                confidenceFill.style.width = `${confidence * 100}%`;
+                
+                // Update metrics
+                if (data.metrics) {
+                    eyeContactValue.textContent = `${Math.round(data.metrics.eye_contact * 100)}%`;
+                    attentionValue.textContent = `${Math.round(data.metrics.attention * 100)}%`;
+                    engagementValue.textContent = `${Math.round(data.metrics.engagement * 100)}%`;
+                }
+                
+                playlistRecommendation.innerHTML = `
+                    <a href="/moods/select/${mood.toLowerCase()}/" 
+                       class="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-200">
+                        <i class="fas fa-music mr-2"></i> Get Playlist
+                    </a>
+                `;
+                
+                // Hide the captured image preview
+                capturedImageContainer.style.display = 'none';
+                
+                // Update the music player with the detected mood
+                updateMusicPlayer(mood);
+            } else {
+                showError(data.error || 'An error occurred while detecting mood.');
+            }
+        } catch (err) {
+            console.error('Error:', err);
+            showError('An error occurred while communicating with the server.');
+        } finally {
+            loadingOverlay.classList.add('hidden');
+            captureBtn.disabled = false;
+        }
+    }
+
+    // Add a function to update the music player with the detected mood
+    function updateMusicPlayer(mood) {
+        const iframe = document.getElementById('music-player-iframe');
+        if (iframe) {
+            try {
+                // Use postMessage to communicate with the iframe
+                iframe.contentWindow.postMessage({
+                    action: 'selectMood',
+                    mood: mood
+                }, '*');
+                
+                // As a backup, also try to reload the iframe with the mood parameter
+                if (iframe.src.indexOf('?') > -1) {
+                    iframe.src = iframe.src.split('?')[0] + '?mood=' + mood;
+                } else {
+                    iframe.src = iframe.src + '?mood=' + mood;
+                }
+            } catch (error) {
+                console.error('Error updating music player mood:', error);
+            }
+        }
+    }
+
+    // Event listeners
+    video.addEventListener('click', captureImage);
+    captureBtn.addEventListener('click', captureImage);
+    retakeBtn.addEventListener('click', retakePhoto);
+    usePhotoBtn.addEventListener('click', usePhoto);
+    
+    tryAgainBtn.addEventListener('click', () => {
+        resultSection.classList.add('hidden');
+        emotionIndicator.classList.add('hidden');
+        errorMessage.style.display = 'none';
+        capturedImageContainer.style.display = 'none';
+    });
+
+    // Handle visibility change
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        } else {
+            startWebcam();
+        }
+    });
+
+    // Stop webcam when leaving page
+    window.addEventListener('beforeunload', () => {
+        if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+        }
+    });
+
+    // Start the webcam when the page loads
+    startWebcam();
+</script>
+{% endblock %} 

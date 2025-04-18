@@ -1,0 +1,1 @@
+"""Moods app for mood-based music discovery.""" 

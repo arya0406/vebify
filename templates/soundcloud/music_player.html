@@ -1,0 +1,767 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Music Player{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .player-container {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    
+    .track-image {
+        width: 100%;
+        height: auto;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .player-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .player-controls button {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #333;
+        transition: all 0.2s;
+    }
+    
+    .player-controls button:hover {
+        color: #007bff;
+        transform: scale(1.1);
+    }
+    
+    .player-controls .play-pause {
+        font-size: 36px;
+    }
+    
+    .player-progressbar {
+        width: 100%;
+        height: 6px;
+        background-color: #ddd;
+        border-radius: 3px;
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+    
+    .progress {
+        height: 100%;
+        background-color: #007bff;
+        border-radius: 3px;
+        width: 0%;
+    }
+    
+    .track-info {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    
+    .track-title {
+        font-weight: bold;
+        font-size: 18px;
+        margin-bottom: 5px;
+    }
+    
+    .track-artist {
+        color: #666;
+        font-size: 14px;
+    }
+    
+    .track-time {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #777;
+    }
+    
+    .track-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .track-item {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .track-item:hover {
+        background-color: #f0f0f0;
+    }
+    
+    .track-item.active {
+        background-color: #e6f2ff;
+    }
+    
+    .track-item img {
+        width: 50px;
+        height: 50px;
+        border-radius: 4px;
+        margin-right: 10px;
+    }
+    
+    .track-item-info {
+        flex-grow: 1;
+    }
+    
+    .track-item-title {
+        font-weight: bold;
+        margin-bottom: 3px;
+    }
+    
+    .track-item-artist {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .track-item-duration {
+        font-size: 12px;
+        color: #999;
+    }
+    
+    .mood-selector {
+        margin-bottom: 20px;
+    }
+    
+    .mood-btn {
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+    
+    .like-btn {
+        color: #888;
+    }
+    
+    .like-btn.active {
+        color: #e74c3c;
+    }
+    
+    /* Loading spinner */
+    .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1 class="mb-4">Music Player</h1>
+            
+            <!-- Mood Selector -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Select Mood</h5>
+                </div>
+                <div class="card-body mood-selector">
+                    <button class="btn btn-outline-primary mood-btn" data-mood="Happy">
+                        <i class="fas fa-smile"></i> Happy
+                    </button>
+                    <button class="btn btn-outline-primary mood-btn" data-mood="Sad">
+                        <i class="fas fa-sad-tear"></i> Sad
+                    </button>
+                    <button class="btn btn-outline-primary mood-btn" data-mood="Joy">
+                        <i class="fas fa-laugh-beam"></i> Joy
+                    </button>
+                    <button class="btn btn-outline-primary mood-btn" data-mood="Anger">
+                        <i class="fas fa-angry"></i> Anger
+                    </button>
+                    <button class="btn btn-outline-primary mood-btn" data-mood="Relaxed">
+                        <i class="fas fa-couch"></i> Relaxed
+                    </button>
+                    <button class="btn btn-outline-primary mood-btn" data-mood="Calm">
+                        <i class="fas fa-wind"></i> Calm
+                    </button>
+                    <button class="btn btn-outline-primary mood-btn" data-mood="Focused">
+                        <i class="fas fa-bullseye"></i> Focused
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Player -->
+            <div class="player-container">
+                <img id="track-artwork" src="{% static 'img/default-artwork.jpg' %}" alt="Track artwork" class="track-image">
+                
+                <div class="track-info">
+                    <div id="track-title" class="track-title">Select a track</div>
+                    <div id="track-artist" class="track-artist">-</div>
+                </div>
+                
+                <div class="player-progressbar" id="progressbar">
+                    <div class="progress" id="progress"></div>
+                </div>
+                
+                <div class="track-time">
+                    <span id="current-time">0:00</span>
+                    <span id="total-time">0:00</span>
+                </div>
+                
+                <div class="player-controls">
+                    <button id="shuffle-btn" title="Shuffle">
+                        <i class="fas fa-random"></i>
+                    </button>
+                    <button id="prev-btn" title="Previous">
+                        <i class="fas fa-step-backward"></i>
+                    </button>
+                    <button id="play-pause-btn" class="play-pause" title="Play/Pause">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button id="next-btn" title="Next">
+                        <i class="fas fa-step-forward"></i>
+                    </button>
+                    <button id="loop-btn" title="Loop">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                    <button id="like-btn" class="like-btn" title="Like">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Track List -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Tracks</h5>
+                    <span id="tracks-count" class="badge bg-primary">0</span>
+                </div>
+                <div class="card-body p-0">
+                    <div id="tracks-container" class="track-list">
+                        <div id="loading" class="text-center py-5" style="display: none;">
+                            <div class="loader"></div>
+                            <p class="mt-3">Loading tracks...</p>
+                        </div>
+                        <div id="no-tracks" class="text-center py-5">
+                            <p>Select a mood to load tracks</p>
+                        </div>
+                        <div id="track-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Elements
+        const trackArtwork = document.getElementById('track-artwork');
+        const trackTitle = document.getElementById('track-title');
+        const trackArtist = document.getElementById('track-artist');
+        const progressbar = document.getElementById('progressbar');
+        const progress = document.getElementById('progress');
+        const currentTimeEl = document.getElementById('current-time');
+        const totalTimeEl = document.getElementById('total-time');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const shuffleBtn = document.getElementById('shuffle-btn');
+        const loopBtn = document.getElementById('loop-btn');
+        const likeBtn = document.getElementById('like-btn');
+        const trackList = document.getElementById('track-list');
+        const trackCount = document.getElementById('tracks-count');
+        const loadingEl = document.getElementById('loading');
+        const noTracksEl = document.getElementById('no-tracks');
+        const moodButtons = document.querySelectorAll('.mood-btn');
+        
+        // Audio
+        const audio = new Audio();
+        
+        // State
+        let tracks = [];
+        let currentTrackIndex = -1;
+        let isPlaying = false;
+        let isShuffle = false;
+        let isLoop = false;
+        let currentMood = '';
+        let likedTracks = new Set();
+        
+        // Initialize
+        updatePlayerState();
+        
+        // Event Listeners
+        audio.addEventListener('timeupdate', updateProgress);
+        audio.addEventListener('ended', handleTrackEnd);
+        audio.addEventListener('canplay', () => {
+            updateTotalTime();
+            if (isPlaying) audio.play();
+        });
+        
+        progressbar.addEventListener('click', seekTrack);
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        prevBtn.addEventListener('click', playPrevTrack);
+        nextBtn.addEventListener('click', playNextTrack);
+        shuffleBtn.addEventListener('click', toggleShuffle);
+        loopBtn.addEventListener('click', toggleLoop);
+        likeBtn.addEventListener('click', toggleLike);
+        
+        // Add event listeners to mood buttons
+        moodButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const mood = button.getAttribute('data-mood');
+                
+                // Reset active state on all buttons
+                moodButtons.forEach(btn => btn.classList.remove('active', 'btn-primary'));
+                button.classList.remove('btn-outline-primary');
+                button.classList.add('active', 'btn-primary');
+                
+                currentMood = mood;
+                loadTracks(mood);
+            });
+        });
+        
+        // Listen for postMessage from parent window (for mood detection integration)
+        window.addEventListener('message', function(event) {
+            // Make sure message is from our own domain
+            if (event.origin !== window.location.origin) return;
+            
+            const data = event.data;
+            if (data && data.action === 'selectMood' && data.mood) {
+                // Find and click the appropriate mood button
+                const moodButtonsSelector = '.mood-btn[data-mood="' + data.mood + '"]';
+                const moodButton = document.querySelector(moodButtonsSelector);
+                
+                if (moodButton) {
+                    moodButton.click();
+                }
+            }
+        });
+        
+        // Check for mood parameter in URL on load
+        const urlParams = new URLSearchParams(window.location.search);
+        const moodParam = urlParams.get('mood');
+        
+        if (moodParam) {
+            // Find and click the appropriate mood button
+            const moodButtonsSelector = '.mood-btn[data-mood="' + moodParam + '"]';
+            const moodButton = document.querySelector(moodButtonsSelector);
+            
+            if (moodButton) {
+                setTimeout(() => {
+                    moodButton.click();
+                }, 500); // Small delay to ensure the page is fully loaded
+            }
+        }
+        
+        // Functions
+        function loadTracks(mood) {
+            setLoading(true);
+            
+            fetch(`/soundcloud/api/tracks/mood/${mood}/`)
+                .then(response => response.json())
+                .then(data => {
+                    tracks = data.tracks || [];
+                    trackCount.textContent = tracks.length;
+                    
+                    if (tracks.length === 0) {
+                        noTracksEl.style.display = 'block';
+                        noTracksEl.innerHTML = '<p>No tracks found for this mood</p>';
+                    } else {
+                        noTracksEl.style.display = 'none';
+                        renderTrackList();
+                    }
+                    
+                    // Reset player if we already were playing something
+                    if (currentTrackIndex !== -1) {
+                        stopAudio();
+                        currentTrackIndex = -1;
+                        updatePlayerState();
+                    }
+                    
+                    setLoading(false);
+                })
+                .catch(error => {
+                    console.error('Error loading tracks:', error);
+                    noTracksEl.style.display = 'block';
+                    noTracksEl.innerHTML = '<p>Error loading tracks. Please try again.</p>';
+                    setLoading(false);
+                });
+        }
+        
+        function renderTrackList() {
+            trackList.innerHTML = '';
+            
+            tracks.forEach((track, index) => {
+                const trackItem = document.createElement('div');
+                trackItem.className = 'track-item';
+                if (index === currentTrackIndex) {
+                    trackItem.classList.add('active');
+                }
+                
+                // Format duration from milliseconds to mm:ss
+                const duration = formatTime(track.duration / 1000);
+                
+                trackItem.innerHTML = `
+                    <img src="${track.artwork_url || '{% static "img/default-artwork.jpg" %}'}" alt="${track.title}">
+                    <div class="track-item-info">
+                        <div class="track-item-title">${track.title}</div>
+                        <div class="track-item-artist">${track.artist}</div>
+                    </div>
+                    <div class="track-item-duration">${duration}</div>
+                `;
+                
+                trackItem.addEventListener('click', () => {
+                    playTrack(index);
+                });
+                
+                trackList.appendChild(trackItem);
+            });
+        }
+        
+        function setLoading(isLoading) {
+            loadingEl.style.display = isLoading ? 'block' : 'none';
+            if (isLoading) {
+                trackList.innerHTML = '';
+                noTracksEl.style.display = 'none';
+            }
+        }
+        
+        function playTrack(index) {
+            if (index < 0 || index >= tracks.length) return;
+            
+            // Record track play if changing tracks
+            if (currentTrackIndex !== index && currentTrackIndex !== -1) {
+                recordTrackPlay(tracks[currentTrackIndex].id);
+            }
+            
+            currentTrackIndex = index;
+            const track = tracks[index];
+            
+            // Update UI
+            updateActiveTrack();
+            updatePlayerState();
+            
+            // Load and play audio
+            audio.src = track.stream_url || '';
+            audio.load();
+            audio.play();
+            isPlaying = true;
+            playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            
+            // Check if track is liked
+            checkTrackLikeStatus(track.id);
+            
+            // Record initial play if this is the first track played
+            if (index === 0 && tracks.length > 0) {
+                recordTrackPlay(track.id);
+            }
+        }
+        
+        function updateActiveTrack() {
+            // Remove active class from all tracks
+            const trackItems = document.querySelectorAll('.track-item');
+            trackItems.forEach((item, i) => {
+                if (i === currentTrackIndex) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            // Scroll to active track
+            if (currentTrackIndex !== -1) {
+                const activeTrack = trackItems[currentTrackIndex];
+                if (activeTrack) {
+                    activeTrack.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+        }
+        
+        function updatePlayerState() {
+            if (currentTrackIndex === -1 || tracks.length === 0) {
+                // No track selected
+                trackArtwork.src = '{% static "img/default-artwork.jpg" %}';
+                trackTitle.textContent = 'Select a track';
+                trackArtist.textContent = '-';
+                currentTimeEl.textContent = '0:00';
+                totalTimeEl.textContent = '0:00';
+                progress.style.width = '0%';
+                likeBtn.classList.remove('active');
+                return;
+            }
+            
+            const track = tracks[currentTrackIndex];
+            trackArtwork.src = track.artwork_url || '{% static "img/default-artwork.jpg" %}';
+            trackTitle.textContent = track.title;
+            trackArtist.textContent = track.artist;
+            
+            // Check if track is liked
+            likeBtn.classList.toggle('active', likedTracks.has(track.id));
+        }
+        
+        function updateProgress() {
+            const currentTime = audio.currentTime;
+            const duration = audio.duration || 1; // Prevent division by zero
+            const progressPercent = (currentTime / duration) * 100;
+            
+            progress.style.width = `${progressPercent}%`;
+            currentTimeEl.textContent = formatTime(currentTime);
+        }
+        
+        function updateTotalTime() {
+            totalTimeEl.textContent = formatTime(audio.duration || 0);
+        }
+        
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+        
+        function seekTrack(e) {
+            if (!audio.src) return;
+            
+            const width = this.clientWidth;
+            const clickX = e.offsetX;
+            const duration = audio.duration;
+            
+            audio.currentTime = (clickX / width) * duration;
+        }
+        
+        function togglePlayPause() {
+            if (currentTrackIndex === -1 && tracks.length > 0) {
+                // If no track is playing but we have tracks, play the first one
+                playTrack(0);
+                return;
+            }
+            
+            if (audio.paused) {
+                audio.play();
+                isPlaying = true;
+                playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            } else {
+                audio.pause();
+                isPlaying = false;
+                playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+            }
+        }
+        
+        function playPrevTrack() {
+            if (tracks.length === 0) return;
+            
+            if (audio.currentTime > 3) {
+                // If current track has played for more than 3 seconds, restart it
+                audio.currentTime = 0;
+                return;
+            }
+            
+            let prevIndex;
+            if (isShuffle) {
+                prevIndex = getRandomTrackIndex();
+            } else {
+                prevIndex = currentTrackIndex - 1;
+                if (prevIndex < 0) prevIndex = tracks.length - 1; // Loop to the end
+            }
+            
+            playTrack(prevIndex);
+        }
+        
+        function playNextTrack() {
+            if (tracks.length === 0) return;
+            
+            let nextIndex;
+            if (isShuffle) {
+                nextIndex = getRandomTrackIndex();
+            } else {
+                nextIndex = currentTrackIndex + 1;
+                if (nextIndex >= tracks.length) nextIndex = 0; // Loop to the beginning
+            }
+            
+            playTrack(nextIndex);
+        }
+        
+        function handleTrackEnd() {
+            if (isLoop) {
+                // Replay the same track
+                audio.currentTime = 0;
+                audio.play();
+            } else {
+                playNextTrack();
+            }
+        }
+        
+        function toggleShuffle() {
+            isShuffle = !isShuffle;
+            shuffleBtn.classList.toggle('text-primary', isShuffle);
+        }
+        
+        function toggleLoop() {
+            isLoop = !isLoop;
+            loopBtn.classList.toggle('text-primary', isLoop);
+        }
+        
+        function getRandomTrackIndex() {
+            // Get a random index different from current
+            if (tracks.length <= 1) return 0;
+            
+            let randomIndex;
+            do {
+                randomIndex = Math.floor(Math.random() * tracks.length);
+            } while (randomIndex === currentTrackIndex);
+            
+            return randomIndex;
+        }
+        
+        function toggleLike() {
+            if (currentTrackIndex === -1) return;
+            
+            const trackId = tracks[currentTrackIndex].id;
+            
+            // Optimistic UI update
+            const isCurrentlyLiked = likedTracks.has(trackId);
+            if (isCurrentlyLiked) {
+                likedTracks.delete(trackId);
+            } else {
+                likedTracks.add(trackId);
+            }
+            likeBtn.classList.toggle('active', !isCurrentlyLiked);
+            
+            // API call to toggle like status
+            fetch(`/soundcloud/api/tracks/${trackId}/like/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    mood: currentMood
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Update liked status based on response
+                if (data.is_liked) {
+                    likedTracks.add(trackId);
+                } else {
+                    likedTracks.delete(trackId);
+                }
+                likeBtn.classList.toggle('active', data.is_liked);
+            })
+            .catch(error => {
+                console.error('Error toggling like:', error);
+                // Revert optimistic update on error
+                if (isCurrentlyLiked) {
+                    likedTracks.add(trackId);
+                } else {
+                    likedTracks.delete(trackId);
+                }
+                likeBtn.classList.toggle('active', isCurrentlyLiked);
+            });
+        }
+        
+        function recordTrackPlay(trackId) {
+            if (!trackId) return;
+            
+            fetch(`/soundcloud/api/tracks/${trackId}/play/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    mood: currentMood
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .catch(error => {
+                console.error('Error recording track play:', error);
+            });
+        }
+        
+        function checkTrackLikeStatus(trackId) {
+            likeBtn.classList.remove('active');
+            
+            if (!trackId) return;
+            
+            // Check if we've already cached this
+            if (likedTracks.has(trackId)) {
+                likeBtn.classList.add('active');
+                return;
+            }
+            
+            fetch(`/soundcloud/api/tracks/${trackId}/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.is_liked) {
+                    likedTracks.add(trackId);
+                    likeBtn.classList.add('active');
+                }
+            })
+            .catch(error => {
+                console.error('Error checking like status:', error);
+            });
+        }
+        
+        function stopAudio() {
+            audio.pause();
+            audio.currentTime = 0;
+            isPlaying = false;
+            playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+        }
+        
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
+{% endblock %} 
