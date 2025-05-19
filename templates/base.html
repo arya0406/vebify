@@ -299,14 +299,10 @@
         <div class="px-2 pt-2 pb-3 space-y-1">
             {% if user.is_authenticated %}
                 {% if user.is_staff %}
-                    <a href="{% url 'admin:index' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Admin</a>
-                    <a href="{% url 'admin:users_customuser_changelist' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Users</a>
-                    <a href="{% url 'admin:moods_mood_changelist' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Moods</a>
+                    <a href="{% url 'moods:mood_list' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Moods</a>
                 {% else %}
                     <a href="{% url 'dashboard' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Dashboard</a>
                     <a href="{% url 'moods:mood_list' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Moods</a>
-                    <a href="{% url 'playlists:playlist_list' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Playlists</a>
-                    <a href="{% url 'mood_detection:face_mood_player' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Face Detection</a>
                 {% endif %}
                 <a href="{% url 'profile' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Profile</a>
                 <a href="{% url 'profile_edit' %}" class="block px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md">Settings</a>
@@ -739,4 +735,4 @@
     <!-- Custom JavaScript -->
     {% block extra_js %}{% endblock %}
 </body>
-</html> 
+</html>
